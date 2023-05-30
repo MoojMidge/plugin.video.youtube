@@ -576,10 +576,46 @@
                     </constraints>
                     <control format="string" type="spinner"/>
                 </setting>
-                <setting help="" id="simple.requests.ssl.verify" label="30578" type="boolean">
+                <setting help="" id="requests.ssl.verify" label="30578" type="boolean">
                     <level>0</level>
                     <default>true</default>
                     <control type="toggle"/>
+                </setting>
+                <setting help="" id="requests.connect_timeout" label="30744" type="integer">
+                    <level>0</level>
+                    <default>3</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>3</step>
+                        <maximum>30</maximum>
+                    </constraints>
+                    <control format="integer" type="slider">
+                        <popup>false</popup>
+                    </control>
+                </setting>
+                <setting help="" id="requests.read_timeout" label="30745" type="integer">
+                    <level>0</level>
+                    <default>10</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>1</step>
+                        <maximum>30</maximum>
+                    </constraints>
+                    <control format="integer" type="slider">
+                        <popup>false</popup>
+                    </control>
+                </setting>
+                <setting help="" id="requests.retries" label="30746" type="integer">
+                    <level>0</level>
+                    <default>3</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>1</step>
+                        <maximum>10</maximum>
+                    </constraints>
+                    <control format="integer" type="slider">
+                        <popup>false</popup>
+                    </control>
                 </setting>
                 <setting help="" id="kodion.support.alternative_player" label="30036" type="boolean">
                     <level>0</level>

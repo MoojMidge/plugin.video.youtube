@@ -1254,3 +1254,15 @@ msgstr ""
 msgctxt "#30739"
 msgid "Alternate #2"
 msgstr ""
+
+msgctxt "#30744"
+msgid "Server connection timeout"
+msgstr ""
+
+msgctxt "#30745"
+msgid "Server read timeout"
+msgstr ""
+
+msgctxt "#30746"
+msgid "Server retry attempts"
+msgstr ""
