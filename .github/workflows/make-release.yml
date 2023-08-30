@@ -1,6 +1,7 @@
 # Based on https://github.com/im85288/service.upnext/blob/master/.github/workflows/release.yml
 name: Make Release
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -8,7 +9,7 @@ on:
 
 jobs:
   release:
-    if: github.repository == 'anxdpanic/plugin.video.youtube'
+    if: github.repository == 'anxdpanic/plugin.video.youtube' || github.event_name == 'workflow_dispatch'
 
     name: Make Release
     runs-on: ubuntu-20.04
