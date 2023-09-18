@@ -1,3 +1,7 @@
+7.0.2.2
+[fix] Fix Matrix ListItemInfoTag class
+[fix] Update unofficial patch following 4c617c5
+
 7.0.2.1
 [fix] fix Matrix InputStream.Adaptive dependency version
 
