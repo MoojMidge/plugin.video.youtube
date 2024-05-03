@@ -127,6 +127,9 @@ class XbmcPlugin(AbstractPlugin):
             context.wakeup()
             ui.clear_property(SLEEPING)
 
+        if context.get_access_manager().is_access_token_expired():
+            provider.reset_client()
+
         if ui.get_property(CHECK_SETTINGS):
             provider.reset_client()
             settings = context.get_settings(flush=True)
