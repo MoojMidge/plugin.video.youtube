@@ -10,13 +10,12 @@ signs the media URL with the output.
 This module is responsible for (1) finding these "transformations
 functions" (2) sends them to be interpreted by jsinterp.py
 """
-import logging
+
 import re
 
-from pytubefix.exceptions import RegexMatchError
-from pytubefix.jsinterp import JSInterpreter
-
-logger = logging.getLogger(__name__)
+from .jsinterp import JSInterpreter
+from ...youtube_exceptions import RegexMatchError
+from ....kodion.logger import log_debug
 
 
 class Cipher:
@@ -73,12 +72,12 @@ def get_initial_function_name(js: str) -> str:
         r"\bc\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*\([^)]*\)\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
         r"\bc\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*\([^)]*\)\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
     ]
-    logger.debug("finding initial function name")
+    log_debug("finding initial function name")
     for pattern in function_patterns:
         regex = re.compile(pattern)
         function_match = regex.search(js)
         if function_match:
-            logger.debug("finished regex search, matched: %s", pattern)
+            log_debug("finished regex search, matched: %s", pattern)
             return function_match.group(1)
 
     raise RegexMatchError(
@@ -106,12 +105,12 @@ def get_throttling_function_name(js: str) -> str:
         r'a\.[a-zA-Z]\s*&&\s*\([a-z]\s*=\s*a\.get\("n"\)\)\s*&&\s*'
         r'\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])?\([a-z]\)',
     ]
-    logger.debug('Finding throttling function name')
+    log_debug('Finding throttling function name')
     for pattern in function_patterns:
         regex = re.compile(pattern)
         function_match = regex.search(js)
         if function_match:
-            logger.debug("finished regex search, matched: %s", pattern)
+            log_debug("finished regex search, matched: %s", pattern)
             if len(function_match.groups()) == 1:
                 return function_match.group(1)
             idx = function_match.group(2)

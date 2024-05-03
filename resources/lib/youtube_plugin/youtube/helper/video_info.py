@@ -16,8 +16,7 @@ import random
 import re
 from traceback import format_stack
 
-from .ratebypass import ratebypass
-from .signature.cipher import Cipher
+from .signature import Cipher
 from .subtitles import Subtitles
 from .utils import THUMB_TYPES
 from ..client.request_client import YouTubeRequestClient
@@ -630,7 +629,6 @@ class VideoInfo(YouTubeRequestClient):
         self._language_base = kwargs.get('language', 'en_US')[0:2]
         self._access_token = access_token
         self._player_js = None
-        self._calculate_n = True
         self._cipher = None
 
         self._selected_client = None
@@ -1075,20 +1073,17 @@ class VideoInfo(YouTubeRequestClient):
         new_query = {}
         update_url = {}
 
-        if self._calculate_n and 'n' in query:
+        if self._cipher and 'n' in query:
+            self._context.log_debug('nsig detected')
             self._player_js = self._player_js or self._get_player_js()
-            if self._calculate_n is True:
-                self._context.log_debug('nsig detected')
-                self._calculate_n = ratebypass.CalculateN(self._player_js)
 
             # Cipher n to get the updated value
-            new_n = self._calculate_n.calculate_n(query['n'])
+            new_n = self._cipher.get_throttling(query['n'])
             if new_n:
                 new_query['n'] = new_n
                 new_query['ratebypass'] = 'yes'
             else:
                 self._context.log_error('nsig handling failed')
-                self._calculate_n = False
 
         if 'range' not in query:
             content_length = query.get('clen', [''])[0]
@@ -1407,7 +1402,7 @@ class VideoInfo(YouTubeRequestClient):
                if fmt and 'url' not in fmt and 'signatureCipher' in fmt):
             self._context.log_debug('signatureCipher detected')
             self._player_js = self._get_player_js()
-            self._cipher = Cipher(self._context, javascript=self._player_js)
+            self._cipher = Cipher(self._player_js)
 
         manifest_url = None
 

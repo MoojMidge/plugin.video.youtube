@@ -28,3 +28,10 @@ class InvalidGrant(KodionException):
 
 class InvalidJSON(KodionException, InvalidJSONError):
     pass
+
+
+class RegexMatchError(KodionException):
+    def __init__(self, caller, pattern):
+        super(RegexMatchError, self).__init__(
+            '{0}: could not find match for {1}'.format(caller, pattern)
+        )
