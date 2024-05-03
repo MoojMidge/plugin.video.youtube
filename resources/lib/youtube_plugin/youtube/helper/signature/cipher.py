@@ -1,177 +1,132 @@
-# -*- coding: utf-8 -*-
 """
+This module contains all the logic needed to find the signature functions.
 
-    Copyright (C) 2014-2016 bromix (plugin.video.youtube)
-    Copyright (C) 2016-2018 plugin.video.youtube
+YouTube's strategy to restrict downloading videos is to send a ciphered version
+of the signature to the client, along with the decryption algorithm obfuscated
+in JavaScript. For the clients to play the videos, JavaScript must take the
+ciphered version, cycle it through a series of "transform functions," and then
+signs the media URL with the output.
 
-    SPDX-License-Identifier: GPL-2.0-only
-    See LICENSES/GPL-2.0-only for more information.
+This module is responsible for (1) finding these "transformations
+functions" (2) sends them to be interpreted by jsinterp.py
 """
-
-from __future__ import absolute_import, division, unicode_literals
-
+import logging
 import re
 
-from .json_script_engine import JsonScriptEngine
+from pytubefix.exceptions import RegexMatchError
+from pytubefix.jsinterp import JSInterpreter
+
+logger = logging.getLogger(__name__)
 
 
-class Cipher(object):
-    def __init__(self, context, javascript):
-        self._context = context
-        self._verify = context.get_settings().verify_ssl()
-        self._javascript = javascript
+class Cipher:
+    def __init__(self, js: str):
+        self.signature_function_name = get_initial_function_name(js)
+        self.throttling_function_name = get_throttling_function_name(js)
 
-        self._object_cache = {}
+        self.calculated_n = None
 
-    def get_signature(self, signature):
-        function_cache = self._context.get_function_cache()
-        json_script = function_cache.run(self._load_javascript,
-                                         function_cache.ONE_DAY,
-                                         javascript=self._javascript)
+        self.js_interpreter = JSInterpreter(js)
 
-        if json_script:
-            json_script_engine = JsonScriptEngine(json_script)
-            return json_script_engine.execute(signature)
+    def get_throttling(self, n: str):
+        """Interpret the function that throttles download speed.
+        :param str n:
+            Contains the parameter that must be transformed.
+        :rtype: str
+        :returns:
+            Returns the transformed value "n".
+        """
+        return self.js_interpreter.call_function(self.throttling_function_name, n)
 
-        return ''
+    def get_signature(self, ciphered_signature: str) -> str:
+        """interprets the function that signs the streams.
+            The lack of this signature generates the 403 forbidden error.
+        :param str ciphered_signature:
+           Contains the signature that must be transformed.
+        :rtype: str
+        :returns:
+           Returns the correct stream signature.
+        """
+        return self.js_interpreter.call_function(self.signature_function_name, ciphered_signature)
 
-    def _load_javascript(self, javascript):
-        function_name = self._find_signature_function_name(javascript)
-        if not function_name:
-            raise Exception('Signature function not found')
 
-        _function = self._find_function_body(function_name, javascript)
-        function_parameter = _function[0].replace('\n', '').split(',')
-        function_body = _function[1].replace('\n', '').split(';')
+def get_initial_function_name(js: str) -> str:
+    """Extract the name of the function responsible for computing the signature.
+    :param str js:
+        The contents of the base.js asset file.
+    :rtype: str
+    :returns:
+        Function name from regex match
+    """
 
-        json_script = {'actions': []}
-        for line in function_body:
-            # list of characters
-            split_match = re.match(r'%s\s?=\s?%s.split\(""\)' % (function_parameter[0], function_parameter[0]), line)
-            if split_match:
-                json_script['actions'].append({'func': 'list',
-                                               'params': ['%SIG%']})
+    function_patterns = [
+        r"\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+        r"\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+        r'(?:\b|[^a-zA-Z0-9$])(?P<sig>[a-zA-Z0-9$]{2})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)',  # noqa: E501
+        r'(?P<sig>[a-zA-Z0-9$]+)\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)',  # noqa: E501
+        r'(["\'])signature\1\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(',
+        r"\.sig\|\|(?P<sig>[a-zA-Z0-9$]+)\(",
+        r"yt\.akamaized\.net/\)\s*\|\|\s*.*?\s*[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*(?:encodeURIComponent\s*\()?\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+        r"\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+        r"\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+        r"\bc\s*&&\s*a\.set\([^,]+\s*,\s*\([^)]*\)\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+        r"\bc\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*\([^)]*\)\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+        r"\bc\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*\([^)]*\)\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(",  # noqa: E501
+    ]
+    logger.debug("finding initial function name")
+    for pattern in function_patterns:
+        regex = re.compile(pattern)
+        function_match = regex.search(js)
+        if function_match:
+            logger.debug("finished regex search, matched: %s", pattern)
+            return function_match.group(1)
 
-            # return
-            return_match = re.match(r'return\s+%s.join\(""\)' % function_parameter[0], line)
-            if return_match:
-                json_script['actions'].append({'func': 'join',
-                                               'params': ['%SIG%']})
+    raise RegexMatchError(
+        caller="get_initial_function_name", pattern="multiple"
+    )
 
-            # real object functions
-            cipher_match = re.match(
-                r'(?P<object_name>[$a-zA-Z0-9]+)\.?\[?"?(?P<function_name>[$a-zA-Z0-9]+)"?\]?\((?P<parameter>[^)]+)\)',
-                line)
-            if cipher_match:
-                object_name = cipher_match.group('object_name')
-                function_name = cipher_match.group('function_name')
-                parameter = cipher_match.group('parameter').split(',')
-                for i in range(len(parameter)):
-                    param = parameter[i].strip()
-                    param = '%SIG%' if i == 0 else int(param)
-                    parameter[i] = param
 
-                # get function from object
-                _function = self._get_object_function(object_name, function_name, javascript)
+def get_throttling_function_name(js: str) -> str:
+    """Extract the name of the function that computes the throttling parameter.
 
-                # try to find known functions and convert them to our json_script
-                slice_match = re.match(r'[a-zA-Z]+.slice\((?P<a>\d+),[a-zA-Z]+\)', _function['body'][0])
-                if slice_match:
-                    a = int(slice_match.group('a'))
-                    params = ['%SIG%', a, parameter[1]]
-                    json_script['actions'].append({'func': 'slice',
-                                                   'params': params})
+    :param str js:
+        The contents of the base.js asset file.
+    :rtype: str
+    :returns:
+        The name of the function used to compute the throttling parameter.
+    """
+    function_patterns = [
+        # https://github.com/ytdl-org/youtube-dl/issues/29326#issuecomment-865985377
+        # https://github.com/yt-dlp/yt-dlp/commit/48416bc4a8f1d5ff07d5977659cb8ece7640dcd8
+        # var Bpa = [iha];
+        # ...
+        # a.C && (b = a.get("n")) && (b = Bpa[0](b), a.set("n", b),
+        # Bpa.length || iha("")) }};
+        # In the above case, `iha` is the relevant function name
+        r'a\.[a-zA-Z]\s*&&\s*\([a-z]\s*=\s*a\.get\("n"\)\)\s*&&\s*'
+        r'\([a-z]\s*=\s*([a-zA-Z0-9$]+)(\[\d+\])?\([a-z]\)',
+    ]
+    logger.debug('Finding throttling function name')
+    for pattern in function_patterns:
+        regex = re.compile(pattern)
+        function_match = regex.search(js)
+        if function_match:
+            logger.debug("finished regex search, matched: %s", pattern)
+            if len(function_match.groups()) == 1:
+                return function_match.group(1)
+            idx = function_match.group(2)
+            if idx:
+                idx = idx.strip("[]")
+                array = re.search(
+                    r'var {nfunc}\s*=\s*(\[.+?\]);'.format(
+                        nfunc=re.escape(function_match.group(1))),
+                    js
+                )
+                if array:
+                    array = array.group(1).strip("[]").split(",")
+                    array = [x.strip() for x in array]
+                    return array[int(idx)]
 
-                splice_match = re.match(r'[a-zA-Z]+.splice\((?P<a>\d+),[a-zA-Z]+\)', _function['body'][0])
-                if splice_match:
-                    a = int(splice_match.group('a'))
-                    params = ['%SIG%', a, parameter[1]]
-                    json_script['actions'].append({'func': 'splice',
-                                                   'params': params})
-
-                swap_match = re.match(r'var\s?[a-zA-Z]+=\s?[a-zA-Z]+\[0\]', _function['body'][0])
-                if swap_match:
-                    params = ['%SIG%', parameter[1]]
-                    json_script['actions'].append({'func': 'swap',
-                                                   'params': params})
-
-                reverse_match = re.match(r'[a-zA-Z].reverse\(\)', _function['body'][0])
-                if reverse_match:
-                    params = ['%SIG%']
-                    json_script['actions'].append({'func': 'reverse',
-                                                   'params': params})
-
-        return json_script
-
-    @staticmethod
-    def _find_signature_function_name(javascript):
-        # match_patterns source is from youtube-dl
-        # https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/extractor/youtube.py#L1553
-        # LICENSE: The Unlicense
-
-        match_patterns = (
-            r'\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-            r'\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-            r'\bm=(?P<sig>[a-zA-Z0-9$]{2,})\(decodeURIComponent\(h\.s\)\)',
-            r'\bc&&\(c=(?P<sig>[a-zA-Z0-9$]{2,})\(decodeURIComponent\(c\)\)',
-            r'(?:\b|[^a-zA-Z0-9$])(?P<sig>[a-zA-Z0-9$]{2,})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)(?:;[a-zA-Z0-9$]{2}\.[a-zA-Z0-9$]{2}\(a,\d+\))?',
-            r'(?P<sig>[a-zA-Z0-9$]+)\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)',
-            # Obsolete patterns
-            r'("|\')signature\1\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-            r'\.sig\|\|(?P<sig>[a-zA-Z0-9$]+)\(',
-            r'yt\.akamaized\.net/\)\s*\|\|\s*.*?\s*[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*(?:encodeURIComponent\s*\()?\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-            r'\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-            r'\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-            r'\bc\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*\([^)]*\)\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\('
-        )
-
-        for pattern in match_patterns:
-            match = re.search(pattern, javascript)
-            if match:
-                return re.escape(match.group('sig'))
-
-        return ''
-
-    @staticmethod
-    def _find_function_body(function_name, javascript):
-        # normalize function name
-        function_name = function_name.replace('$', '\\$')
-        pattern = r'%s=function\((?P<parameter>\w)\){(?P<body>[a-z=\.\("\)]*;(.*);(?:.+))}' % function_name
-        match = re.search(pattern, javascript)
-        if match:
-            return match.group('parameter'), match.group('body')
-
-        return '', ''
-
-    @staticmethod
-    def _find_object_body(object_name, javascript):
-        object_name = object_name.replace('$', '\\$')
-        match = re.search(r'var %s={(?P<object_body>.*?})};' % object_name, javascript, re.S)
-        if match:
-            return match.group('object_body')
-        return ''
-
-    def _get_object_function(self, object_name, function_name, javascript):
-        if object_name not in self._object_cache:
-            self._object_cache[object_name] = {}
-        elif function_name in self._object_cache[object_name]:
-            return self._object_cache[object_name][function_name]
-
-        _object_body = self._find_object_body(object_name, javascript)
-        _object_body = _object_body.split('},')
-        for _function in _object_body:
-            if not _function.endswith('}'):
-                _function = ''.join((_function, '}'))
-            _function = _function.strip()
-
-            match = re.match(r'(?P<name>[^:]*):function\((?P<parameter>[^)]*)\){(?P<body>[^}]+)}', _function)
-            if match:
-                name = match.group('name').replace('"', '')
-                parameter = match.group('parameter')
-                body = match.group('body').split(';')
-
-                self._object_cache[object_name][name] = {'name': name,
-                                                         'body': body,
-                                                         'params': parameter}
-
-        return self._object_cache[object_name][function_name]
+    raise RegexMatchError(
+        caller="get_throttling_function_name", pattern="multiple"
+    )
