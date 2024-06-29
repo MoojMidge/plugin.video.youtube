@@ -20,6 +20,7 @@ from .constants import (
 from .context import XbmcContext
 from .monitors import PlayerMonitor, ServiceMonitor
 from .utils import rm_dir
+from .utils.datetime_parser import since_epoch
 from ..youtube.provider import Provider
 
 
@@ -52,8 +53,9 @@ def run():
     rm_dir(TEMP_PATH)
 
     plugin_sleeping = httpd_can_sleep = False
-    plugin_sleep_timeout = httpd_sleep_timeout = 0
+    plugin_sleep_timeout = httpd_sleep_timeout = scheduler_timeout = 0
     ping_period = 60
+    scheduler_period = 60 * 5
     loop_num = sub_loop_num = 0
     restart_attempts = 0
     video_id = None
@@ -91,6 +93,23 @@ def run():
                     restart_attempts += 1
                 else:
                     monitor.shutdown_httpd()
+
+        if scheduler_timeout >= scheduler_period:
+            now = since_epoch()
+            while monitor.tasks:
+                next_task = monitor.tasks[0]
+                if next_task['timestamp'] > now:
+                    break
+
+                next_task = monitor.tasks.popleft()
+                context.execute(next_task['action'])
+
+                repeat = next_task.get('repeat')
+                if repeat:
+                    next_task['timestamp'] += repeat
+                    monitor.tasks.append(next_task)
+
+            scheduler_timeout = 0
 
         while not monitor.abortRequested():
             if container['is_plugin']:
@@ -140,6 +159,7 @@ def run():
                 monitor.waitForAbort(wait_interval)
                 httpd_sleep_timeout += wait_interval
                 plugin_sleep_timeout += wait_interval
+                scheduler_timeout += wait_interval
 
             if loop_num <= 0:
                 break

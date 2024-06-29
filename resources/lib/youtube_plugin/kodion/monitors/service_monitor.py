@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import json
 import threading
+from collections import deque
 
 from ..compatibility import xbmc, xbmcgui
 from ..constants import (
@@ -24,6 +25,7 @@ from ..constants import (
 )
 from ..logger import log_debug
 from ..network import get_connect_address, get_http_server, httpd_status
+from ..utils.datetime_parser import since_epoch
 
 
 class ServiceMonitor(xbmc.Monitor):
@@ -44,6 +46,14 @@ class ServiceMonitor(xbmc.Monitor):
 
         self.refresh = False
         self.interrupt = False
+
+        self.tasks = deque([
+            {
+                'action': 'RunPlugin(plugin://plugin.video.youtube/special/my_subscriptions)',
+                'timestamp': since_epoch(),
+                'repeat': 2 * 60 * 60,
+            },
+        ])
 
         self._use_httpd = None
         if self.httpd_required(settings):
