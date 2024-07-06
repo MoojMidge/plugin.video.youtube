@@ -584,3 +584,24 @@ def goto_page(context, params=None):
             params or context.get_params(),
         ))
     )
+
+
+def schedule_remove(context, key):
+    return (
+        context.localize('schedule.remove'),
+        'RunPlugin({0})'.format(context.create_uri(
+            (PATHS.SCHEDULE, 'remove',),
+            {
+                'item_id': key,
+            },
+        ))
+    )
+
+
+def schedule_clear(context):
+    return (
+        context.localize('schedule.clear'),
+        'RunPlugin({0})'.format(context.create_uri(
+            (PATHS.SCHEDULE, 'clear',),
+        ))
+    )

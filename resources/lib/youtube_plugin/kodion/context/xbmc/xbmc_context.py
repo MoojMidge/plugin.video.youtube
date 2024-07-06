@@ -173,6 +173,14 @@ class XbmcContext(AbstractContext):
         'reset.access_manager.confirm': 30581,
         'retry': 30612,
         'saved.playlists': 30611,
+        'schedule': 30817,
+        'schedule.add': 30821,
+        'schedule.added': 30824,
+        'schedule.clear': 30818,
+        'schedule.clear.confirm': 30819,
+        'schedule.edit': 30822,
+        'schedule.item': 30825,
+        'schedule.remove': 30823,
         'search': 30102,
         'search.clear': 30556,
         'search.new': 30110,
@@ -593,6 +601,7 @@ class XbmcContext(AbstractContext):
         new_context._feed_history = self._feed_history
         new_context._function_cache = self._function_cache
         new_context._playback_history = self._playback_history
+        new_context._schedule = self._schedule
         new_context._search_history = self._search_history
         new_context._watch_later_list = self._watch_later_list
 

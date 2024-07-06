@@ -29,6 +29,7 @@ from ..sql_store import (
     FeedHistory,
     FunctionCache,
     PlaybackHistory,
+    Schedule,
     SearchHistory,
     WatchLaterList,
 )
@@ -124,6 +125,7 @@ class AbstractContext(object):
         self._feed_history = None
         self._function_cache = None
         self._playback_history = None
+        self._schedule = None
         self._search_history = None
         self._watch_later_list = None
 
@@ -216,6 +218,13 @@ class AbstractContext(object):
             filepath = (self.get_data_path(), uuid, 'watch_later.sqlite')
             self._watch_later_list = WatchLaterList(filepath)
         return self._watch_later_list
+
+    def get_schedule(self):
+        uuid = self.get_uuid()
+        if not self._schedule or self._schedule.uuid != uuid:
+            filepath = (self.get_data_path(), uuid, 'schedule.sqlite')
+            self._schedule = Schedule(filepath)
+        return self._schedule
 
     def get_uuid(self):
         uuid = self._uuid

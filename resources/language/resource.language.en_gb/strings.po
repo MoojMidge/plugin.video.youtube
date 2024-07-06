@@ -1572,3 +1572,39 @@ msgstr ""
 msgctxt "#30816"
 msgid "List is empty.[CR][CR]Refresh from context menu or try again later."
 msgstr ""
+
+msgctxt "#30817"
+msgid "My Schedule"
+msgstr ""
+
+msgctxt "#30818"
+msgid "Clear scheduled items"
+msgstr ""
+
+msgctxt "#30819"
+msgid "Are you sure you want to clear your scheduled items?"
+msgstr ""
+
+msgctxt "#30820"
+msgid "Delete schedule database"
+msgstr ""
+
+msgctxt "#30821"
+msgid "Add to My Schedule"
+msgstr ""
+
+msgctxt "#30822"
+msgid "Edit scheduled item"
+msgstr ""
+
+msgctxt "#30823"
+msgid "Delete scheduled item"
+msgstr ""
+
+msgctxt "#30824"
+msgid "Added to My Schedule"
+msgstr ""
+
+msgctxt "#30825"
+msgid "Scheduled item"
+msgstr ""
