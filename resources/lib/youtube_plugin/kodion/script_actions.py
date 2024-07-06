@@ -140,6 +140,7 @@ def _maintenance_actions(context, action, params):
             'feed_history': context.get_feed_history,
             'function_cache': context.get_function_cache,
             'playback_history': context.get_playback_history,
+            'schedule': context.get_schedule,
             'search_history': context.get_search_history,
             'watch_later': context.get_watch_later_list,
         }
@@ -200,6 +201,7 @@ def _maintenance_actions(context, action, params):
             'feed_history': 'feeds.sqlite',
             'function_cache': 'cache.sqlite',
             'playback_history': 'history.sqlite',
+            'schedule': 'schedule.sqlite',
             'search_history': 'search.sqlite',
             'watch_later': 'watch_later.sqlite',
             'api_keys': 'api_keys.json',

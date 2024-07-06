@@ -534,6 +534,11 @@
                     <default>true</default>
                     <control type="toggle"/>
                 </setting>
+                <setting id="youtube.folder.schedule" type="boolean" label="30817" help="">
+                    <level>0</level>
+                    <default>true</default>
+                    <control type="toggle"/>
+                </setting>
                 <setting id="youtube.folder.switch.user.show" type="boolean" label="30655" help="">
                     <level>0</level>
                     <default>true</default>
@@ -1066,6 +1071,14 @@
                     <data>RunScript($ID,maintenance/clear?target=feed_history)</data>
                     <control format="action" type="button"/>
                 </setting>
+                <setting id="kodion.maintain.clear.schedule" type="action" label="30818" help="">
+                    <level>0</level>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <data>RunScript($ID,maintenance/clear?target=schedule)</data>
+                    <control format="action" type="button"/>
+                </setting>
             </group>
             <group id="2">
                 <setting id="kodion.maintain.delete.function_cache" type="action" label="30553" help="">
@@ -1122,6 +1135,14 @@
                         <allowempty>true</allowempty>
                     </constraints>
                     <data>RunScript($ID,maintenance/delete?target=feed_history)</data>
+                    <control format="action" type="button"/>
+                </setting>
+                <setting id="kodion.maintain.delete.schedule" type="action" label="30820" help="">
+                    <level>0</level>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <data>RunScript($ID,maintenance/delete?target=schedule)</data>
                     <control format="action" type="button"/>
                 </setting>
             </group>

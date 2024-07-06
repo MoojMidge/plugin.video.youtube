@@ -25,6 +25,7 @@ from .helper import (
     yt_login,
     yt_play,
     yt_playlist,
+    yt_schedule,
     yt_setup_wizard,
     yt_specials,
     yt_subscriptions,
@@ -82,6 +83,12 @@ class Provider(AbstractProvider):
             '^/subscriptions/(?P<method>[^/]+)/?$',
             yt_subscriptions.process,
         )
+
+        self.register_path(r''.join((
+            '^',
+            PATHS.SCHEDULE,
+            '/(?P<method>add|clear|edit|list|new|remove)/?$'
+        )), yt_schedule.process)
 
         atexit.register(self.tear_down)
 
@@ -1351,6 +1358,14 @@ class Provider(AbstractProvider):
                 image='{media}/live.png',
             )
             result.append(live_events_item)
+
+        if settings_bool('youtube.folder.schedule', True):
+            schedule_item = DirectoryItem(
+                localize('schedule'),
+                create_uri((PATHS.SCHEDULE, 'list')),
+                image='{media}/schedule.png',
+            )
+            result.append(schedule_item)
 
         # switch user
         if settings_bool('youtube.folder.switch.user.show', True):

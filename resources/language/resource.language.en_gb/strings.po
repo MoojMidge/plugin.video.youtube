@@ -1584,3 +1584,39 @@ msgstr ""
 msgctxt "#30819"
 msgid "Play from start"
 msgstr ""
+
+msgctxt "#30820"
+msgid "My Schedule"
+msgstr ""
+
+msgctxt "#30821"
+msgid "Clear scheduled items"
+msgstr ""
+
+msgctxt "#30822"
+msgid "Are you sure you want to clear your scheduled items?"
+msgstr ""
+
+msgctxt "#30823"
+msgid "Delete schedule database"
+msgstr ""
+
+msgctxt "#30824"
+msgid "Add to My Schedule"
+msgstr ""
+
+msgctxt "#30825"
+msgid "Edit scheduled item"
+msgstr ""
+
+msgctxt "#30826"
+msgid "Delete scheduled item"
+msgstr ""
+
+msgctxt "#30827"
+msgid "Added to My Schedule"
+msgstr ""
+
+msgctxt "#30828"
+msgid "Scheduled item"
+msgstr ""

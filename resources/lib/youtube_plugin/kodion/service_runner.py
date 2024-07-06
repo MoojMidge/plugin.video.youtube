@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from .constants import (
     ABORT_FLAG,
+    PATHS,
     PLUGIN_SLEEPING,
     SERVER_POST_START,
     TEMP_PATH,
@@ -20,6 +21,7 @@ from .constants import (
 from .context import XbmcContext
 from .monitors import PlayerMonitor, ServiceMonitor
 from .utils import rm_dir
+from .utils.datetime_parser import since_epoch
 from ..youtube.provider import Provider
 
 
@@ -66,6 +68,9 @@ def run():
     active_interval_ms = 100
     idle_interval_ms = 1000
 
+    scheduler_period_ms = 300000
+    scheduler_time_ms = 0
+
     video_id = None
     container = monitor.is_plugin_container()
 
@@ -106,6 +111,51 @@ def run():
                     httpd_restart_attempts += 1
                 else:
                     monitor.shutdown_httpd()
+
+        if scheduler_time_ms >= scheduler_period_ms:
+            now = since_epoch()
+
+            schedule = context.get_schedule()
+            current_tasks = schedule.get_items()
+            tasks_remaining = len(current_tasks) if current_tasks else -1
+
+            while tasks_remaining > 0:
+                task = current_tasks.pop()
+                tasks_remaining -= 1
+                if task['enable']:
+                    if task['timestamp'] is None:
+                        task['timestamp'] = now
+                    elif task['timestamp'] > now:
+                        continue
+
+                    # refresh / reminder / play / custom
+                    task_type = task['type']
+                    task_params = task['params']
+
+                    if task_type == 'refresh':
+                        context.execute('RunPlugin(%s)' % task_params['uri'])
+
+                    elif task_type == 'reminder':
+                        pass
+
+                    elif task_type == 'play':
+                        context.execute('RunPlugin(%s)' % context.create_uri(
+                            (PATHS.PLAY,),
+                            task_params,
+                        ))
+
+                    elif task_type == 'custom':
+                        context.execute(task_params['command'])
+
+                    repeat = task['repeat']
+                    if repeat:
+                        task['timestamp'] += repeat
+                        schedule.update_item(task)
+                    else:
+                        task['enable'] = False
+                        schedule.update_item(task)
+
+            scheduler_time_ms = 0
 
         check_item = not plugin_is_idle and container['is_plugin']
         if check_item:
@@ -148,6 +198,7 @@ def run():
             wait_time_ms += wait_interval_ms
             httpd_idle_time_ms += wait_interval_ms
             plugin_idle_time_ms += wait_interval_ms
+            scheduler_time_ms += wait_interval_ms
 
             if wait_time_ms >= loop_period_ms:
                 break
