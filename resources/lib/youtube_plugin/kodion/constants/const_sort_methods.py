@@ -13,6 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 import sys
 
 from ..compatibility import (
+    xbmc,
     xbmcplugin,
 )
 
@@ -76,14 +77,20 @@ methods = [
     ('VIDEO_ORIGINAL_TITLE',            20376,    57),
     ('VIDEO_ORIGINAL_TITLE_IGNORE_THE', 20376,    None),
 ]
+SORT_ID_MAPPING = {
+    '__default__': 0,
+}
 
 namespace = sys.modules[__name__]
 name = label_id = sort_id = None
 for name, label_id, sort_id in methods:
     setattr(namespace, name, getattr(xbmcplugin, 'SORT_METHOD_' + name, -1))
+    if sort_id is not None:
+        SORT_ID_MAPPING[xbmc.getLocalizedString(label_id).lower()] = sort_id
 
 del (
     sys,
+    xbmc,
     xbmcplugin,
     methods,
     namespace,

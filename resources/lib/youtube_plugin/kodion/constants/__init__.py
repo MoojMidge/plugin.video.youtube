@@ -149,6 +149,8 @@ PAGE = 'page'
 PLAYLIST_IDS = 'playlist_ids'
 SCREENSAVER = 'screensaver'
 SEEK = 'seek'
+SORT_METHOD = 'sort_method'
+SORT_ORDER = 'sort_order'
 START = 'start'
 VIDEO_IDS = 'video_ids'
 
@@ -255,6 +257,8 @@ __all__ = (
     'PLAYLIST_IDS',
     'SCREENSAVER',
     'SEEK',
+    'SORT_METHOD',
+    'SORT_ORDER',
     'START',
     'VIDEO_IDS',
 

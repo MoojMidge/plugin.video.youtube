@@ -16,6 +16,8 @@ from . import logging
 from .constants import (
     CHECK_SETTINGS,
     PATHS,
+    SORT_METHOD,
+    SORT_ORDER,
 )
 from .context import XbmcContext
 from .debug import Profiler
