@@ -59,7 +59,8 @@ def run():
     video_id = None
     container = monitor.is_plugin_container()
     while not monitor.abortRequested():
-        idle = get_infobool('System.IdleTime(10)')
+        # idle = get_infobool('System.IdleTime(10)')
+        idle = False
 
         if idle:
             if plugin_sleep_timeout >= 30:
