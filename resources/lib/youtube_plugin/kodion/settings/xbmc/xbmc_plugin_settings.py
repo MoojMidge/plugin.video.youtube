@@ -120,6 +120,7 @@ class XbmcPluginSettings(AbstractSettings):
             fill = False
 
         self._echo = get_kodi_setting_bool('debug.showloginfo')
+        self._echo = True
         self._cache = {}
         if current_system_version.compatible(21, 0):
             self._proxy = SettingsProxy(xbmc_addon.getSettings())

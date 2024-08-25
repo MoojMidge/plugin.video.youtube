@@ -24,6 +24,7 @@ _plugin = XbmcPlugin()
 _provider = Provider()
 
 _profiler = _context.get_infobool('System.GetBool(debug.showloginfo)')
+_profiler = True
 if _profiler:
     from .debug import Profiler
 

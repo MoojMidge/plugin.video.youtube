@@ -1740,6 +1740,15 @@ class YouTube(LoginClient):
 
             available = threads['max'] - threads['pool_counts']['all']
             limit = payload['limit']
+            self._context.log_debug(
+                f'\n'
+                f'{pool_id = }\n'
+                f'{threads["pool_counts"] = }\n'
+                f'{available = }\n'
+                f'{len(threaded_output["channel_ids"]) = }\n'
+                f'{len(threaded_output["feeds"]) = }\n'
+                f'{len(threaded_output["do_refresh"]) = }\n'
+            )
             if limit:
                 if current_num >= limit:
                     continue

@@ -23,6 +23,13 @@ FATAL = xbmc.LOGFATAL
 SEVERE = xbmc.LOGSEVERE
 NONE = xbmc.LOGNONE
 
+import logging
+
+logging.basicConfig()
+logging.getLogger("urllib3").setLevel(logging.DEBUG)
+
+DEBUG = NOTICE
+
 
 def log(text, log_level=DEBUG, addon_id=ADDON_ID):
     if not addon_id:
