@@ -1,3 +1,17 @@
+## v7.2.0+beta.2
+### Fixed
+- Fix audio langauge fallback selection #989
+  - Also correctly distinguish between original vs default audio streams
+- Fix search context menu items for Next Page and New Search items
+Fix lock acquire/release logic in My Subscriptions #1032
+
+### Changed
+- Further improvements to fallback window handling to minimise crashes and loss of window history
+  - Enable intercepting and redirecting PlayMedia calls
+  - Improve handling of search keyboard input when navigating through window history
+    - Also allow bookmarks/favourites to be created for Quick Search
+    - Remove need to store search query in data cache
+
 ## v7.2.0+beta.1
 ### Fixed
 - Fix processing of "q" and "channelId" search query params
