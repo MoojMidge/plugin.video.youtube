@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 import atexit
 import socket
-from traceback import format_stack
 
 from requests import Session
 from requests.adapters import HTTPAdapter, Retry
@@ -20,6 +19,7 @@ from requests.utils import DEFAULT_CA_BUNDLE_PATH, extract_zipped_paths
 from urllib3.util.ssl_ import create_urllib3_context
 
 from ..logger import Logger
+from ..utils.methods import format_stack
 
 
 __all__ = (
@@ -148,7 +148,7 @@ class BaseRequestsClass(Logger):
         except self._default_exc as exc:
             exc_response = exc.response or response
             response_text = exc_response and exc_response.text
-            stack = format_stack()
+            stack = format_stack(exc)
             error_details = {'exc': exc}
 
             if error_hook:
