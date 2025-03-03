@@ -1,3 +1,12 @@
+## v7.2.0+beta.6
+### Fixed
+- Fix My Subscriptions not loading old or previously accessed content #1123
+- Manually redirect video server requests if required #1127
+- Improve logging of client ID #1117
+
+### Changed
+- Improve handling of using filtered playlists in channels #988 #1060
+
 ## v7.2.0+beta.5
 ### Fixed
 - Improve url resolver error handling
