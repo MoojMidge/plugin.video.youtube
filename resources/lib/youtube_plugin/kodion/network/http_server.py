@@ -365,23 +365,27 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             ids = self.server_priority_list['stream_ids']
             server_lists = self.server_priority_list['server_lists']
             if stream_id in ids:
-                priority = server_lists[stream_id]
-                request_servers.sort(
-                    key=partial(self._sort_servers,
-                                _len=len(priority['list']),
-                                _index=priority['list'].index),
-                    reverse=True,
-                )
+                priority_list = server_lists[stream_id]['list']
+                if priority_list:
+                    last_server = priority_list[-1]
+                    if last_server and last_server not in request_servers:
+                        request_servers.append(last_server)
+                    request_servers.sort(
+                        key=partial(self._sort_servers,
+                                    _len=len(priority_list),
+                                    _index=priority_list.index),
+                        reverse=True,
+                    )
             else:
                 ids.append(stream_id)
                 if len(ids) > 5:
                     old_id = ids.popleft()
                     del server_lists[old_id]
-                priority = {
+                priority_list = []
+                server_lists[stream_id] = {
                     'started': False,
-                    'list': [],
+                    'list': priority_list,
                 }
-                server_lists[stream_id] = priority
 
             headers = params.pop('__headers', empty)[0]
             if headers:
@@ -396,9 +400,21 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             stream_redirect = settings.httpd_stream_redirect()
 
             response = None
-            for server in request_servers:
-                if not server:
-                    continue
+            redirect_target = None
+            iterator = iter(request_servers)
+            while 1:
+                if redirect_target:
+                    server = redirect_target
+                    redirect_target = None
+                else:
+                    server = next(iterator, Ellipsis)
+                    if server is Ellipsis:
+                        self.send_error(
+                            response.status_code if response else 500
+                        )
+                        break
+                    elif not server:
+                        continue
 
                 stream_url = urlunsplit((
                     'https',
@@ -408,7 +424,7 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                     '',
                 ))
 
-                if stream_redirect and server in priority['list']:
+                if stream_redirect and server in priority_list:
                     self.send_response(301)
                     self.send_header('Location', stream_url)
                     self.send_header('Connection', 'close')
@@ -419,23 +435,55 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                 with self.requests.request(stream_url,
                                            method='GET',
                                            headers=headers,
-                                           stream=True,
-                                           allow_redirects=False) as response:
-                    if not response or not response.ok or response.is_redirect:
-                        if server in priority['list']:
-                            priority['list'].remove(server)
+                                           allow_redirects=False,
+                                           stream=True) as response:
+                    if not response:
+                        success = False
                         context.log_warning(
                             'HTTPServer - Stream proxy request failed'
+                            '\n\tServer:   |{server}|'
+                            .format(server=server)
+                        )
+                    elif response.is_redirect:
+                        success = False
+                        next_request = response.next
+                        if next_request:
+                            redirect_target = next_request.headers.get('Host')
+                        else:
+                            redirect_target = response.headers.get('Host')
+                        context.log_warning(
+                            'HTTPServer - Stream proxy request redirected'
+                            '\n\tServer: |{server}|'
+                            '\n\tTarget: |{target}|'
+                            '\n\tStatus: |{status}|'
+                            '\n\tReason: |{reason}|'
+                            .format(server=server,
+                                    target=redirect_target,
+                                    status=response.status_code,
+                                    reason=response.reason)
+                        )
+                        if redirect_target == server:
+                            redirect_target = None
+                    elif not response.ok:
+                        success = False
+                        context.log_warning(
+                            'HTTPServer - Stream proxy response not OK'
                             '\n\tServer: |{server}|'
                             '\n\tStatus: |{status}|'
                             '\n\tReason: |{reason}|'
                             .format(server=server,
-                                    status=response and response.status_code,
-                                    reason=response and response.reason)
+                                    status=response.status_code,
+                                    reason=response.reason)
                         )
+                    else:
+                        success = True
+
+                    if not success:
+                        if server in priority_list:
+                            priority_list.remove(server)
                         continue
-                    if server not in priority['list']:
-                        priority['list'].append(server)
+                    elif server not in priority_list:
+                        priority_list.append(server)
 
                     self.send_response(response.status_code)
                     for header, value in response.headers.items():
@@ -453,8 +501,6 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                     for chunk in raw_data.stream(None, decode_content=False):
                         wfile.write(chunk)
                 break
-            else:
-                self.send_error(response and response.status_code or 500)
 
         else:
             self.send_error(501)
