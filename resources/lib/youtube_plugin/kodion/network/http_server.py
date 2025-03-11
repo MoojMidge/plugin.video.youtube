@@ -39,6 +39,7 @@ from ..constants import (
     PATHS,
     TEMP_PATH,
 )
+from ..debug import Profiler
 from ..utils import parse_and_redact_uri, wait
 
 
@@ -142,6 +143,12 @@ class RequestHandler(BaseHTTPRequestHandler, object):
         #     self.finish()
 
     def handle_one_request(self):
+        profiler = Profiler(
+            enabled=True,
+            lazy=False,
+            print_callees=False,
+            num_lines=20,
+        )
         # Allow self.rfile.readline call to be interrupted by
         # HTTPServer.server_close when connection is kept open by keep-alive
         rfile = self.rfile
@@ -160,6 +167,8 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             self.close_connection = True
             if exc.errno not in {ECONNABORTED, ECONNREFUSED, ECONNRESET}:
                 raise exc
+        finally:
+            profiler.print_stats()
 
     def ip_address_status(self, ip_address):
         is_whitelisted = ip_address in self.whitelist_ips
