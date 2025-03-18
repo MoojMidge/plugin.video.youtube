@@ -46,6 +46,7 @@ from ...kodion.utils import datetime_parser, format_stack, strip_html_from_text
 def _process_list_response(provider,
                            context,
                            json_data,
+                           allow_duplicates=True,
                            item_filter=None,
                            progress_dialog=None):
     yt_items = json_data.get('items', [])
@@ -365,7 +366,10 @@ def _process_list_response(provider,
             item.set_track_number(position + 1)
             item_id = item.video_id
             if item_id in video_id_dict:
-                fifo_queue = video_id_dict[item_id]
+                if allow_duplicates:
+                    fifo_queue = video_id_dict[item_id]
+                else:
+                    continue
             else:
                 fifo_queue = deque()
                 video_id_dict[item_id] = fifo_queue
@@ -580,6 +584,7 @@ def response_to_items(provider,
                       json_data,
                       sort=None,
                       reverse=False,
+                      allow_duplicates=True,
                       process_next_page=True,
                       item_filter=None):
     params = context.get_params()
@@ -620,6 +625,7 @@ def response_to_items(provider,
                 provider,
                 context,
                 json_data,
+                allow_duplicates=allow_duplicates,
                 item_filter=_item_filter,
                 progress_dialog=progress_dialog,
             )
