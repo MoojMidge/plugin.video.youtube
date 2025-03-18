@@ -600,7 +600,10 @@ class YouTubeRequestClient(BaseRequestsClass):
                     continue
 
                 try:
-                    result = result[key]
+                    if callable(key):
+                        result = key(result)
+                    else:
+                        result = result[key]
                 except (KeyError, IndexError):
                     continue
                 break
