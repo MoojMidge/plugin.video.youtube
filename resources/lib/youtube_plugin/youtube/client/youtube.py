@@ -924,6 +924,200 @@ class YouTube(LoginClient):
                                 params=params,
                                 **kwargs)
 
+    def get_browse_videos(self,
+                          browse_id=None,
+                          channel_id=None,
+                          params=None,
+                          route=None,
+                          _route={
+                              'featured': 'EghmZWF0dXJlZPIGBAoCMgA%3D',
+                              'videos': 'EgZ2aWRlb3PyBgQKAjoA',
+                              'shorts': 'EgZzaG9ydHPyBgUKA5oBAA%3D%3D',
+                              'streams': 'EgdzdHJlYW1z8gYECgJ6AA%3D%3D',
+                              'podcasts': 'Eghwb2RjYXN0c_IGBQoDugEA',
+                              'courses': 'Egdjb3Vyc2Vz8gYFCgPCAQA%3D',
+                              'playlists': 'EglwbGF5bGlzdHPyBgQKAkIA',
+                              'community': 'Egljb21tdW5pdHnyBgQKAkoA',
+                              'search': 'EgZzZWFyY2jyBgQKAloA',
+                          },
+                          data=None,
+                          client=None,
+                          no_login=True,
+                          visitor='',
+                          page_token='',
+                          click_tracking='',
+                          json_path=None,
+                          remaining=None,
+                          offset=None):
+        browse_id = browse_id or channel_id
+        if not browse_id:
+            return None
+
+        post_data = {
+            'browseId': browse_id,
+        }
+
+        if channel_id and route:
+            params = _route.get(route)
+        if params:
+            post_data['params'] = params
+
+        if data:
+            post_data.update(data)
+
+        if page_token:
+            post_data['continuation'] = page_token
+
+        if click_tracking or visitor:
+            context = {}
+            if click_tracking:
+                context['clickTracking'] = {
+                    'clickTrackingParams': click_tracking,
+                }
+            if visitor:
+                context['client'] = {
+                    'visitorData': visitor,
+                }
+            post_data['context'] = context
+
+        result = self.api_request(
+            client=client or 'web',
+            url='https://www.youtube.com/youtubei/v1/{_endpoint}',
+            path='browse',
+            method='POST',
+            post_data=post_data,
+            no_login=no_login,
+        )
+        if not result:
+            return None
+
+        if not json_path:
+            return result
+
+        if page_token:
+            item_path = json_path.get('continuation_items')
+        else:
+            item_path = json_path.get('items')
+        if not item_path:
+            return result
+
+        nodes = self.json_traverse(result, path=item_path, default=())
+        items = [
+            {
+                'kind': 'youtube#video',
+                'id': self.json_traverse(
+                    video,
+                    json_path.get('id') or (
+                        'videoId',
+                    ),
+                ),
+                '_partial': True,
+                'snippet': {
+                    'title': self.json_traverse(
+                        video,
+                        json_path.get('title') or (
+                            ('title', 'runs', 0, 'text'),
+                            ('headline', 'simpleText'),
+                        ),
+                    ),
+                    'thumbnails': self.json_traverse(
+                        video,
+                        json_path.get('thumbnails') or (
+                            'thumbnail',
+                            'thumbnails'
+                        ),
+                    ),
+                    'channelId': channel_id or self.json_traverse(
+                        video,
+                        json_path.get('channel_id') or (
+                            ('longBylineText', 'shortBylineText'),
+                            'runs',
+                            0,
+                            'navigationEndpoint',
+                            'browseEndpoint',
+                            'browseId',
+                        ),
+                    ),
+                }
+            }
+            for videos in nodes
+            for video in
+            (videos if isinstance(videos, (list, tuple)) else (videos,))
+            if video and 'videoId' in video
+        ]
+        if not items:
+            return None
+
+        if remaining is None:
+            remaining = self.max_results()
+        if remaining and offset:
+            remaining = offset + remaining
+            if remaining < len(items):
+                last_item = None
+            else:
+                last_item = nodes[-1]
+            items = items[offset:remaining]
+        elif remaining and remaining < len(items):
+            last_item = None
+            items = items[:remaining]
+        elif offset:
+            last_item = nodes[-1]
+            items = items[offset:]
+        else:
+            last_item = nodes[-1]
+
+        v3_response = {
+            'kind': 'youtube#videoListResponse',
+            'items': items,
+        }
+
+        if last_item and 'continuationCommand' in last_item:
+            continuation = last_item
+        else:
+            continuation = self.json_traverse(
+                result,
+                json_path.get('continuation'),
+            )
+
+        if continuation:
+            click_tracking = continuation.get('clickTrackingParams')
+            if click_tracking:
+                v3_response['clickTracking'] = click_tracking
+
+            page_token = self.json_traverse(
+                continuation,
+                json_path.get('page_token') or (
+                    (
+                        (
+                            'continuationCommand',
+                            'token',
+                        ),
+                        (
+                            'continuation',
+                        ),
+                    ),
+                ),
+            )
+            if page_token:
+                v3_response['nextPageToken'] = page_token
+
+            visitor = self.json_traverse(
+                result,
+                json_path.get('visitor_data') or (
+                    'responseContext',
+                    'visitorData',
+                ),
+            ) or visitor
+            if visitor:
+                v3_response['visitorData'] = visitor
+        else:
+            v3_response['visitorData'] = visitor
+            v3_response['nextPageToken'] = page_token
+            v3_response['clickTracking'] = click_tracking
+            v3_response['offset'] = remaining
+
+        return v3_response
+
     def get_live_events(self,
                         event_type='live',
                         order='date',
@@ -2324,6 +2518,7 @@ class YouTube(LoginClient):
                     client='v3',
                     method='GET',
                     client_data=None,
+                    url=None,
                     path=None,
                     params=None,
                     post_data=None,
@@ -2335,6 +2530,8 @@ class YouTube(LoginClient):
         client_data.setdefault('method', method)
         if path:
             client_data['_endpoint'] = path.strip('/')
+        if url:
+            client_data['url'] = url
         if headers:
             client_data['headers'] = headers
         if method in {'POST', 'PUT'}:
