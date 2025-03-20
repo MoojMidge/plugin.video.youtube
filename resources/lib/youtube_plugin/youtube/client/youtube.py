@@ -330,12 +330,211 @@ class YouTube(LoginClient):
                                 params=params,
                                 **kwargs)
 
+    def get_recommended_for_tv(self,
+                               visitor='',
+                               page_token='',
+                               click_tracking='',
+                               offset=None,
+                               remaining=None):
+        post_data = {'browseId': 'FEwhat_to_watch'}
+        if page_token:
+            post_data['continuation'] = page_token
+        if click_tracking or visitor:
+            context = {}
+            if click_tracking:
+                context['clickTracking'] = {
+                    'clickTrackingParams': click_tracking,
+                }
+            if visitor:
+                context['client'] = {
+                    'visitorData': visitor,
+                }
+            post_data['context'] = context
+
+        result = self.api_request(client='tv_embed',
+                                  method='POST',
+                                  path='browse',
+                                  post_data=post_data)
+        if not result:
+            return None
+
+        recommended_videos = self.json_traverse(
+            result,
+            path=(
+                     (
+                         (
+                             'onResponseReceivedEndpoints',
+                             'onResponseReceivedActions',
+                         ),
+                         0,
+                         'appendContinuationItemsAction',
+                         'continuationItems',
+                     ) if page_token else (
+                         'contents',
+                         'tvBrowseRenderer',
+                         'content',
+                         'tvSurfaceContentRenderer',
+                         'content',
+                         'sectionListRenderer',
+                         'contents',
+                         slice(None),
+                         'shelfRenderer',
+                         'content',
+                         'horizontalListRenderer',
+                         'items',
+                     )
+                 )
+        )
+        if not recommended_videos:
+            return None
+
+        items = [
+            {
+                'kind': 'youtube#video',
+                'id': video['videoId'],
+                '_partial': True,
+                'snippet': {
+                    'title': self.json_traverse(video, (
+                        ('title', 'runs', 0, 'text'),
+                        ('headline', 'simpleText'),
+                    )),
+                    'thumbnails': self.json_traverse(video, (
+                        'tileRenderer',
+                        'header',
+                        'tileHeaderRenderer',
+                        'thumbnail',
+                        'thumbnails',
+                    )),
+                    'channelId': self.json_traverse(video, (
+                        ('longBylineText', 'shortBylineText'),
+                        'runs',
+                        0,
+                        'navigationEndpoint',
+                        'browseEndpoint',
+                        'browseId',
+                    )),
+                }
+            }
+            for videos in recommended_videos
+            for video in
+            (videos if isinstance(videos, list) else (videos,))
+            if video and 'videoId' in video
+        ]
+        if not items:
+            return None
+
+        if remaining is None:
+            remaining = self.max_results()
+        if remaining and offset:
+            remaining = offset + remaining
+            if remaining < len(items):
+                last_item = None
+            else:
+                last_item = recommended_videos[-1]
+            items = items[offset:remaining]
+        elif remaining and remaining < len(items):
+            last_item = None
+            items = items[:remaining]
+        elif offset:
+            last_item = recommended_videos[-1]
+            items = items[offset:]
+        else:
+            last_item = recommended_videos[-1]
+
+        v3_response = {
+            'kind': 'youtube#activityListResponse',
+            'items': items,
+        }
+
+        if last_item and 'continuationCommand' in last_item:
+            click_tracking = last_item.get('clickTrackingParams')
+            if click_tracking:
+                v3_response['clickTracking'] = click_tracking
+            page_token = last_item['continuationCommand'].get('token')
+            if page_token:
+                v3_response['nextPageToken'] = page_token
+            visitor = self.json_traverse(result, (
+                'responseContext',
+                'visitorData',
+            )) or visitor
+            if visitor:
+                v3_response['visitorData'] = visitor
+        else:
+            v3_response['visitorData'] = visitor
+            v3_response['nextPageToken'] = page_token
+            v3_response['clickTracking'] = click_tracking
+            v3_response['offset'] = remaining
+
+        return v3_response
+
     def get_recommended_for_home(self,
                                  visitor='',
                                  page_token='',
                                  click_tracking='',
                                  offset=None,
                                  remaining=None):
+        return self.get_browse_videos(
+            browse_id='FEwhat_to_watch',
+            client='android_vr',
+            no_login=False,
+            json_path={
+                'continuation_items': (
+                    'continuationContents',
+                    'sectionListContinuation',
+                    'contents',
+                    slice(None),
+                    'shelfRenderer',
+                    'content',
+                    ('horizontalListRenderer', 'verticalListRenderer'),
+                    'items',
+                    slice(None),
+                    ('gridVideoRenderer', 'compactVideoRenderer'),
+                    # 'videoId',
+                ),
+                'items': (
+                    'contents',
+                    'singleColumnBrowseResultsRenderer',
+                    'tabs',
+                    0,
+                    'tabRenderer',
+                    'content',
+                    'sectionListRenderer',
+                    'contents',
+                    slice(None),
+                    'shelfRenderer',
+                    'content',
+                    ('horizontalListRenderer', 'verticalListRenderer'),
+                    'items',
+                    slice(None),
+                    ('gridVideoRenderer', 'compactVideoRenderer'),
+                    # 'videoId',
+                ),
+                'continuation': (
+                    'contents',
+                    'singleColumnBrowseResultsRenderer',
+                    'tabs',
+                    0,
+                    'tabRenderer',
+                    'content',
+                    'sectionListRenderer',
+                    'continuations',
+                    0,
+                    'nextContinuationData',
+                ),
+            },
+            visitor=visitor,
+            page_token=page_token,
+            click_tracking=click_tracking,
+            offset=offset,
+            remaining=remaining,
+        )
+
+    def get_recommended_for_web(self,
+                                visitor='',
+                                page_token='',
+                                click_tracking='',
+                                offset=None,
+                                remaining=None):
         post_data = {'browseId': 'FEwhat_to_watch'}
         if page_token:
             post_data['continuation'] = page_token
@@ -354,7 +553,8 @@ class YouTube(LoginClient):
         result = self.api_request(client='v1',
                                   method='POST',
                                   path='browse',
-                                  post_data=post_data)
+                                  post_data=post_data,
+                                  no_login=True)
         if not result:
             return None
 
