@@ -1,5 +1,20 @@
 ## v7.2.0+beta.8
 ### Fixed
+- Fix incorrect deletion of provider parameter in 10c3758 #1160
+- Fix misidentifying channels in channel filter #1159
+
+### Changed
+- Use channel handle by default when adding/removing/matching channels
+- Use channel handle as artist and in channel info for visibility
+- Channel filters may need to be updated to use handles instead of channel name
+  - e.g. "@channel_1_handle,@channel_2_handle" instead of "channel 1 name, channel 2 name"
+  - Channels can be added/removed from the filter through the Subscriptions or Bookmarks context menu
+
+### New
+- Add hide_progress plugin url query parameter
+
+## v7.2.0+beta.8
+### Fixed
 - Fix regression in opening playlists of logged in user #1154
 - Fix regressions in checking channel filters
 
