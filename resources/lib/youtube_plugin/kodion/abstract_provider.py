@@ -346,12 +346,17 @@ class AbstractProvider(object):
                     ui.set_property(CONTAINER_ID, container)
                     ui.set_property(CONTAINER_POSITION, position)
 
-            context.execute(''.join((
-                'ReplaceWindow' if window_replace else 'ActivateWindow',
-                '(Videos,',
-                uri,
-                ',return)' if window_return else ')',
-            )))
+            context.execute(
+                ''.join((
+                    'ReplaceWindow' if window_replace else 'ActivateWindow',
+                    '(Videos,',
+                    uri,
+                    ',return)' if window_return else ')',
+                )),
+                wait=True,
+                # wait_for=(REROUTE_PATH if window_cache else None),
+                # wait_for_set=False,
+            )
         return True
 
     @staticmethod
