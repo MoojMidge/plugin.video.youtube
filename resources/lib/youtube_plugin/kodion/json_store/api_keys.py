@@ -162,7 +162,7 @@ class APIKeyStore(JSONStore):
             'main': self.get_api_keys(self.get_current_switch()),
         }
 
-    def get_dev_config(self, developer_id):
+    def get_developer_config(self, developer_id):
         context = self._context
 
         developer_configs = self.get_api_keys('developer')

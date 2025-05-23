@@ -144,7 +144,7 @@ class Provider(AbstractProvider):
                 switch = None
                 key_details = None
         else:
-            dev_config = api_store.get_dev_config(dev_id)
+            dev_config = api_store.get_developer_config(dev_id)
             origin = dev_config.get('origin')
             key_details = dev_config.get('main')
             if key_details:
