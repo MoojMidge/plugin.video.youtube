@@ -13,9 +13,9 @@ from __future__ import absolute_import, division, unicode_literals
 from weakref import ref
 
 from ..abstract_settings import AbstractSettings
+from ... import logging
 from ...compatibility import xbmcaddon
 from ...constants import ADDON_ID, VALUE_FROM_STR
-from ...logger import Logger
 from ...utils.system_version import current_system_version
 
 
@@ -93,7 +93,7 @@ class SettingsProxy(object):
                 del self._ref
 
 
-class XbmcPluginSettings(AbstractSettings, Logger):
+class XbmcPluginSettings(AbstractSettings):
     _instances = set()
     _proxy = None
 
@@ -154,10 +154,10 @@ class XbmcPluginSettings(AbstractSettings, Logger):
             value = default
 
         if self._echo and echo is not False:
-            self.log_debug('Get |{setting}|: {value} (bool, {status})'
-                           .format(setting=setting,
-                                   value=value,
-                                   status=error if error else 'success'))
+            logging.debug('Get |{setting}|: {value} (bool, {status})',
+                          setting=setting,
+                          value=value,
+                          status=(error if error else 'success'))
         self._cache[setting] = value
         return value
 
@@ -173,10 +173,10 @@ class XbmcPluginSettings(AbstractSettings, Logger):
             error = exc
 
         if self._echo and echo is not False:
-            self.log_debug('Set |{setting}|: {value} (bool, {status})'
-                           .format(setting=setting,
-                                   value=value,
-                                   status=error if error else 'success'))
+            logging.debug('Set |{setting}|: {value} (bool, {status})',
+                          setting=setting,
+                          value=value,
+                          status=(error if error else 'success'))
         return not error
 
     def get_int(self, setting, default=-1, process=None, echo=None):
@@ -201,10 +201,10 @@ class XbmcPluginSettings(AbstractSettings, Logger):
             value = default
 
         if self._echo and echo is not False:
-            self.log_debug('Get |{setting}|: {value} (int, {status})'
-                           .format(setting=setting,
-                                   value=value,
-                                   status=error if error else 'success'))
+            logging.debug('Get |{setting}|: {value} (int, {status})',
+                          setting=setting,
+                          value=value,
+                          status=(error if error else 'success'))
         self._cache[setting] = value
         return value
 
@@ -220,10 +220,10 @@ class XbmcPluginSettings(AbstractSettings, Logger):
             error = exc
 
         if self._echo and echo is not False:
-            self.log_debug('Set |{setting}|: {value} (int, {status})'
-                           .format(setting=setting,
-                                   value=value,
-                                   status=error if error else 'success'))
+            logging.debug('Set |{setting}|: {value} (int, {status})',
+                          setting=setting,
+                          value=value,
+                          status=(error if error else 'success'))
         return not error
 
     def get_string(self, setting, default='', echo=None):
@@ -246,10 +246,10 @@ class XbmcPluginSettings(AbstractSettings, Logger):
                 echo = '...'.join((value[:3], value[-3:]))
             else:
                 echo = value
-            self.log_debug('Get |{setting}|: "{echo}" (str, {status})'
-                           .format(setting=setting,
-                                   echo=echo,
-                                   status=error if error else 'success'))
+            logging.debug('Get |{setting}|: "{echo}" (str, {status})',
+                          setting=setting,
+                          echo=echo,
+                          status=(error if error else 'success'))
         self._cache[setting] = value
         return value
 
@@ -273,10 +273,10 @@ class XbmcPluginSettings(AbstractSettings, Logger):
                 echo = '...'.join((value[:3], value[-3:]))
             else:
                 echo = value
-            self.log_debug('Set |{setting}|: "{echo}" (str, {status})'
-                           .format(setting=setting,
-                                   echo=echo,
-                                   status=error if error else 'success'))
+            logging.debug('Set |{setting}|: "{echo}" (str, {status})',
+                          setting=setting,
+                          echo=echo,
+                          status=(error if error else 'success'))
         return not error
 
     def get_string_list(self, setting, default=None, echo=None):
@@ -293,10 +293,10 @@ class XbmcPluginSettings(AbstractSettings, Logger):
             value = default
 
         if self._echo and echo is not False:
-            self.log_debug('Get |{setting}|: "{value}" (str list, {status})'
-                           .format(setting=setting,
-                                   value=value,
-                                   status=error if error else 'success'))
+            logging.debug('Get |{setting}|: "{value}" (str list, {status})',
+                          setting=setting,
+                          value=value,
+                          status=(error if error else 'success'))
         self._cache[setting] = value
         return value
 
@@ -312,8 +312,8 @@ class XbmcPluginSettings(AbstractSettings, Logger):
             error = exc
 
         if self._echo and echo is not False:
-            self.log_debug('Set |{setting}|: "{value}" (str list, {status})'
-                           .format(setting=setting,
-                                   value=value,
-                                   status=error if error else 'success'))
+            logging.debug('Set |{setting}|: "{value}" (str list, {status})',
+                          setting=setting,
+                          value=value,
+                          status=(error if error else 'success'))
         return not error

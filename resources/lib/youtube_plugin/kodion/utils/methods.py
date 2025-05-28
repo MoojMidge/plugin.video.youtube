@@ -20,6 +20,7 @@ from re import compile as re_compile
 from sys import exc_info
 from traceback import format_stack as _format_stack
 
+from .. import logging
 from ..compatibility import (
     byte_string_type,
     parse_qs,
@@ -30,7 +31,6 @@ from ..compatibility import (
     xbmc,
     xbmcvfs,
 )
-from ..logger import Logger
 
 
 __all__ = (
@@ -87,7 +87,7 @@ def select_stream(context,
         use_live_mpd = False
 
     if audio_only:
-        context.log_debug('Select stream - Audio only')
+        logging.debug('Audio only')
         stream_list = [item for item in stream_data_list
                        if 'video' not in item]
     else:
@@ -103,7 +103,7 @@ def select_stream(context,
         ]
 
     if not stream_list:
-        context.log_debug('Select stream - No streams found')
+        logging.debug('No streams found')
         return None
 
     def _stream_sort(_stream):
@@ -112,7 +112,7 @@ def select_stream(context,
     stream_list.sort(key=_stream_sort, reverse=True)
     num_streams = len(stream_list)
     ask_for_quality = ask_for_quality and num_streams >= 1
-    context.log_debug('Available streams: {0}'.format(num_streams))
+    logging.debug('%d available streams', num_streams)
 
     for idx, stream in enumerate(stream_list):
         log_data = stream.copy()
@@ -129,9 +129,10 @@ def select_stream(context,
         if original_value:
             log_data['url'] = redact_ip_in_uri(original_value)
 
-        context.log_debug('Stream {idx}:'
-                          '\n\t{stream_details}'
-                          .format(idx=idx, stream_details=log_data))
+        logging.debug(('Stream {idx}:',
+                       '{stream_details}'),
+                      idx=idx,
+                      stream_details=log_data)
 
     if ask_for_quality:
         selected_stream = context.get_ui().on_select(
@@ -139,12 +140,12 @@ def select_stream(context,
             [stream['title'] for stream in stream_list],
         )
         if selected_stream == -1:
-            context.log_debug('Select stream - No stream selected')
+            logging.debug('No stream selected')
             return None
     else:
         selected_stream = 0
 
-    context.log_debug('Selected stream: Stream {0}'.format(selected_stream))
+    logging.debug('Stream %d selected', selected_stream)
     return stream_list[selected_stream]
 
 
@@ -163,21 +164,20 @@ def make_dirs(path):
         path = ''.join((path, '/'))
     path = xbmcvfs.translatePath(path)
 
-    succeeded = xbmcvfs.exists(path) or xbmcvfs.mkdirs(path)
-    if succeeded:
+    if xbmcvfs.exists(path) or xbmcvfs.mkdirs(path):
         return path
 
     try:
         os.makedirs(path)
-        succeeded = True
-    except OSError:
-        succeeded = xbmcvfs.exists(path)
-
-    if succeeded:
-        return path
-    Logger.log_error('utils.make_dirs - Failed to create directory'
-                     '\n\tPath: {path}'.format(path=path))
-    return False
+    except OSError as exc:
+        if not xbmcvfs.exists(path):
+            logging.exception(('Failed',
+                               'Exception: {exc!r}',
+                               'Path:      |{path}|'),
+                              exc=exc,
+                              path=path)
+            return False
+    return path
 
 
 def rm_dir(path):
@@ -185,20 +185,18 @@ def rm_dir(path):
         path = ''.join((path, '/'))
     path = xbmcvfs.translatePath(path)
 
-    succeeded = (not xbmcvfs.exists(path)
-                 or xbmcvfs.rmdir(path, force=True))
-    if not succeeded:
-        try:
-            shutil.rmtree(path)
-        except OSError:
-            pass
-        succeeded = not xbmcvfs.exists(path)
-
-    if succeeded:
+    if not xbmcvfs.exists(path) or xbmcvfs.rmdir(path, force=True):
         return True
-    Logger.log_error('utils.rm_dir - Failed to remove directory'
-                     '\n\tPath: {path}'.format(path=path))
-    return False
+
+    try:
+        shutil.rmtree(path)
+    except OSError as exc:
+        logging.exception(('Failed',
+                           'Exception: {exc!r}',
+                           'Path:      |{path}|'),
+                          exc=exc,
+                          path=path)
+    return not xbmcvfs.exists(path)
 
 
 def find_video_id(plugin_path,

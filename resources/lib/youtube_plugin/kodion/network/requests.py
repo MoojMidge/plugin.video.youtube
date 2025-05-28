@@ -18,8 +18,7 @@ from requests.exceptions import InvalidJSONError, RequestException, URLRequired
 from requests.utils import DEFAULT_CA_BUNDLE_PATH, extract_zipped_paths
 from urllib3.util.ssl_ import create_urllib3_context
 
-from ..logger import Logger
-from ..utils.methods import format_stack
+from .. import logging
 
 
 __all__ = (
@@ -63,7 +62,9 @@ class SSLHTTPAdapter(HTTPAdapter):
         return super(SSLHTTPAdapter, self).cert_verify(conn, url, verify, cert)
 
 
-class BaseRequestsClass(Logger):
+class BaseRequestsClass(object):
+    log = logging.getLogger(__name__)
+
     _session = Session()
     _session.mount('https://', SSLHTTPAdapter(
         pool_maxsize=10,
@@ -204,8 +205,14 @@ class BaseRequestsClass(Logger):
 
         except self._default_exc as exc:
             exc_response = exc.response or response
-            response_text = exc_response and exc_response.text
-            stack = format_stack()
+            if exc_response:
+                response_text = exc_response.text
+                response_status = exc_response.status_code
+                response_reason = exc_response.reason
+            else:
+                response_text = None
+                response_status = 'Error'
+                response_reason = 'No response'
             error_details = {'exc': exc}
 
             if error_hook:
@@ -214,7 +221,7 @@ class BaseRequestsClass(Logger):
                 error_hook_kwargs['exc'] = exc
                 error_hook_kwargs['response'] = exc_response
                 error_response = error_hook(**error_hook_kwargs)
-                _title, _info, _detail, _response, _trace, _exc = error_response
+                _title, _info, _detail, _response, _exc = error_response
                 if _title is not None:
                     error_title = _title
                 if _info is not None:
@@ -224,44 +231,29 @@ class BaseRequestsClass(Logger):
                 if _response is not None:
                     response = _response
                     response_text = repr(_response)
-                if _trace is not None:
-                    stack = _trace
                 if _exc is not None:
                     raise_exc = _exc
 
-            if error_title is None:
-                error_title = 'Request - Failed'
-
-            if error_info is None:
-                try:
-                    error_info = '\n\t'.join((
-                        'URL:       {method} {url}',
-                        'Status:    {response.status_code} - {response.reason}',
-                    )).format(method=method,
-                              url=url,
-                              response=exc.response)
-                except AttributeError:
-                    error_info = ('Exception: {exc!r}'
-                                  .format(exc=exc))
-            elif '{' in error_info:
-                try:
+            try:
+                if error_info and '{' in error_info:
                     error_info = error_info.format(**error_details)
-                except (AttributeError, IndexError, KeyError):
-                    error_info = ('Exception: {exc!r}'
-                                  .format(exc=exc))
+            except (AttributeError, IndexError, KeyError):
+                error_info = None
 
-            if response_text:
-                response_text = ('Response:  {0}'
-                                 .format(response_text))
-
-            if stack:
-                stack = 'Stack trace (most recent call last):\n{stack}'.format(
-                    stack=''.join(stack)
-                )
-
-            self.log_error('\n\t'.join([part for part in [
-                error_title, error_info, response_text, stack
-            ] if part]))
+            self.log.exception(('{title}',
+                                'URL:       {method} {url}',
+                                'Status:    {status} - {reason}',
+                                'Response:  {response_text}',
+                                'Exception: {exc!r}',
+                                '{error_info}'),
+                               title=(error_title or 'Failed'),
+                               method=method,
+                               url=url,
+                               status=response_status,
+                               reason=response_reason,
+                               response_text=response_text,
+                               error_info=error_info,
+                               exc=exc)
 
             if raise_exc:
                 if not isinstance(raise_exc, BaseException):

@@ -13,12 +13,15 @@ from __future__ import absolute_import, division, unicode_literals
 from weakref import proxy
 
 from ..abstract_context_ui import AbstractContextUI
+from ... import logging
 from ...compatibility import string_type, xbmc, xbmcgui
 from ...constants import ADDON_ID, REFRESH_CONTAINER
 from ...utils import to_unicode
 
 
 class XbmcContextUI(AbstractContextUI):
+    log = logging.getLogger(__name__)
+
     def __init__(self, context):
         super(XbmcContextUI, self).__init__()
         self._context = context
@@ -162,8 +165,11 @@ class XbmcContextUI(AbstractContextUI):
         self._context.send_notification(REFRESH_CONTAINER)
 
     def set_property(self, property_id, value='true'):
-        self._context.log_debug('Set property |{id}|: {value!r}'
-                                .format(id=property_id, value=value))
+        self.log.debug('Set property |{property_id}|: {value!r}',
+                       property_id=property_id,
+                       value=value,
+                       stack_info=True,
+                       stacklevel=2)
         _property_id = '-'.join((ADDON_ID, property_id))
         xbmcgui.Window(10000).setProperty(_property_id, value)
         return value
@@ -171,8 +177,11 @@ class XbmcContextUI(AbstractContextUI):
     def get_property(self, property_id):
         _property_id = '-'.join((ADDON_ID, property_id))
         value = xbmcgui.Window(10000).getProperty(_property_id)
-        self._context.log_debug('Get property |{id}|: {value!r}'
-                                .format(id=property_id, value=value))
+        self.log.debug('Get property |{property_id}|: {value!r}',
+                       property_id=property_id,
+                       value=value,
+                       stack_info=True,
+                       stacklevel=2)
         return value
 
     def pop_property(self, property_id):
@@ -181,12 +190,18 @@ class XbmcContextUI(AbstractContextUI):
         value = window.getProperty(_property_id)
         if value:
             window.clearProperty(_property_id)
-        self._context.log_debug('Pop property |{id}|: {value!r}'
-                                .format(id=property_id, value=value))
+        self.log.debug('Pop property |{property_id}|: {value!r}',
+                       property_id=property_id,
+                       value=value,
+                       stack_info=True,
+                       stacklevel=2)
         return value
 
     def clear_property(self, property_id):
-        self._context.log_debug('Clear property |{id}|'.format(id=property_id))
+        self.log.debug('Clear property |{property_id}|',
+                       property_id=property_id,
+                       stack_info=True,
+                       stacklevel=2)
         _property_id = '-'.join((ADDON_ID, property_id))
         xbmcgui.Window(10000).clearProperty(_property_id)
         return None
