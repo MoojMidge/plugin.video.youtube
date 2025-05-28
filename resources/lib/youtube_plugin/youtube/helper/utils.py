@@ -27,10 +27,10 @@ from re import (
     search as re_search,
 )
 
+from ...kodion import logging
 from ...kodion.compatibility import string_type, unquote, urlsplit
 from ...kodion.constants import CONTENT, PATHS
 from ...kodion.items import AudioItem, CommandItem, DirectoryItem, menu_items
-from ...kodion.logger import Logger
 from ...kodion.utils import (
     datetime_parser,
     friendly_number,
@@ -1242,14 +1242,15 @@ def get_shelf_index_by_title(context, json_data, shelf_title):
         title = shelf.get('shelfRenderer', {}).get('title', {}).get('runs', [{}])[0].get('text', '')
         if title.lower() == shelf_title.lower():
             shelf_index = idx
-            context.log_debug('Found shelf index |{index}| for |{title}|'.format(
-                index=shelf_index, title=shelf_title
-            ))
+            logging.debug('Found shelf index |{index}| for |{title}|',
+                          index=shelf_index,
+                          title=shelf_title)
             break
 
     if shelf_index is not None and 0 > shelf_index >= len(contents):
-        context.log_debug('Shelf index |{0}| out of range |0-{1}|'
-                          .format(shelf_index, len(contents)))
+        logging.debug('Shelf index |{index}| out of range |0-{range}|',
+                      index=shelf_index,
+                      range=len(contents))
         shelf_index = None
 
     return shelf_index
@@ -1390,17 +1391,17 @@ def filter_parse(item,
                 if not result:
                     break
             except (AttributeError, TypeError, ValueError, re_error) as exc:
-                Logger.log_error('filter_parse - Error'
-                                 '\n\tException: {exc!r}'
-                                 '\n\tCriteria:  |{criteria}|'
-                                 '\n\tinput_1:   |{input_1}|'
-                                 '\n\top:        |{op_str}|'
-                                 '\n\tinput_2:   |{input_2}|'
-                                 .format(exc=exc,
-                                         criteria=criteria,
-                                         input_1=input_1,
-                                         op_str=op_str,
-                                         input_2=input_2))
+                logging.exception(('Error',
+                                   'Exception: {exc!r}',
+                                   'Criteria:  |{criteria}|',
+                                   'input_1:   |{input_1}|',
+                                   'op:        |{op_str}|',
+                                   'input_2:   |{input_2}|'),
+                                  exc=exc,
+                                  criteria=criteria,
+                                  input_1=input_1,
+                                  op_str=op_str,
+                                  input_2=input_2)
                 break
         else:
             criteria_met = True
