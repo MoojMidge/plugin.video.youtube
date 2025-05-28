@@ -55,9 +55,9 @@ class Profiler(object):
     from weakref import ref as _ref
 
     try:
-        from StringIO import StringIO as _StringIO
-    except ImportError:
         from io import StringIO as _StringIO
+    except ImportError:
+        from StringIO import StringIO as _StringIO
 
     _wraps = staticmethod(_wraps)
     log = _logging.getLogger(__name__)
@@ -283,3 +283,44 @@ class Profiler(object):
 
     def tear_down(self):
         self.__class__._instances.discard(self)
+
+
+class ExecTimeout(object):
+    from functools import wraps as _wraps
+    from sys import settrace as _settrace
+    from threading import Timer as _Timer
+
+    _wraps = staticmethod(_wraps)
+
+    def __init__(self, seconds):
+        self._interval = seconds
+        self._timed_out = False
+
+    def __call__(self, function):
+        @self._wraps(function)
+        def wrapper(*args, **kwargs):
+            timer = self._Timer(
+                interval=self._interval,
+                function=self.set_timed_out,
+            )
+            timer.daemon = True
+
+            self._settrace(self.timeout_trace)
+            timer.start()
+            try:
+                return function(*args, **kwargs)
+            finally:
+                timer.cancel()
+                self._settrace(None)
+
+        return wrapper
+
+    def timeout_trace(self, frame, event, arg):
+        if event == 'call':
+            return self.timeout_trace
+        elif event == 'line' and self._timed_out:
+            raise TimeoutError('Python execution timed out')
+        return self.timeout_trace
+
+    def set_timed_out(self):
+        self._timed_out = True
