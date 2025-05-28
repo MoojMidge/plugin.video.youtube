@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import os
 
+from . import logging
 from .compatibility import parse_qsl, urlsplit, xbmc, xbmcaddon, xbmcvfs
 from .constants import (
     DATA_PATH,
@@ -469,18 +470,18 @@ def run(argv):
                 params = dict(parse_qsl(args.query))
 
         system_version = context.get_system_version()
-        context.log_notice('Script: Running v{version}'
-                           '\n\tKodi:     v{kodi}'
-                           '\n\tPython:   v{python}'
-                           '\n\tCategory: |{category}|'
-                           '\n\tAction:   |{action}|'
-                           '\n\tParams:   |{params}|'
-                           .format(version=context.get_version(),
-                                   kodi=str(system_version),
-                                   python=system_version.get_python_version(),
-                                   category=category,
-                                   action=action,
-                                   params=params))
+        logging.info(('Running v{version}',
+                      'Kodi:     v{kodi}',
+                      'Python:   v{python}',
+                      'Category: |{category}|',
+                      'Action:   |{action}|',
+                      'Params:   |{params}|'),
+                     version=context.get_version(),
+                     kodi=str(system_version),
+                     python=system_version.get_python_version(),
+                     category=category,
+                     action=action,
+                     params=params)
 
         if not category:
             xbmcaddon.Addon().openSettings()
