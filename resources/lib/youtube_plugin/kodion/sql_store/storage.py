@@ -14,12 +14,29 @@ import os
 import pickle
 import sqlite3
 import time
-from threading import Lock
+from threading import RLock, Timer
 
 from .. import logging
 from ..compatibility import to_str
 from ..utils.datetime_parser import fromtimestamp, since_epoch
 from ..utils.methods import make_dirs
+
+
+class StorageLock(object):
+    def __init__(self):
+        self._lock = RLock()
+        self._num_waiting = 0
+
+    def __enter__(self):
+        self._num_waiting += 1
+        self._lock.acquire()
+        self._num_waiting -= 1
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._lock.release()
+
+    def waiting(self):
+        return self._num_waiting > 0
 
 
 class Storage(object):
@@ -168,7 +185,8 @@ class Storage(object):
         self._filepath = os.path.join(*filepath)
         self._db = None
         self._cursor = None
-        self._lock = Lock()
+        self._lock = StorageLock()
+        self._close_timer = None
         self._max_item_count = -1 if migrate else max_item_count
         self._max_file_size_kb = -1 if migrate else max_file_size_kb
 
@@ -209,22 +227,32 @@ class Storage(object):
         self._max_file_size_kb = max_file_size_kb
 
     def __enter__(self):
-        self._lock.acquire()
-        if not self._db or not self._cursor:
-            return self._open()
-        return self._db, self._cursor
+        close_timer = self._close_timer
+        if close_timer:
+            close_timer.cancel()
+            self._close_timer = None
+        if self._db and self._cursor:
+            return self._db, self._cursor
+        return self._open()
 
     def __exit__(self, exc_type=None, exc_val=None, exc_tb=None):
-        self._close()
-        self._lock.release()
+        close_timer = self._close_timer
+        if close_timer:
+            close_timer.cancel()
+        if self._lock.waiting():
+            self._close_timer = None
+            return
+        close_timer = Timer(5, self._close)
+        close_timer.daemon = True
+        self._close_timer = close_timer
 
     def _open(self):
         statements = []
         if not os.path.exists(self._filepath):
             make_dirs(os.path.dirname(self._filepath))
-            statements.append(
-                self._sql['create_table']
-            )
+            statements.extend((
+                self._sql['create_table'],
+            ))
             self._base._table_updated = True
 
         for _ in range(3):
@@ -258,7 +286,7 @@ class Storage(object):
             'PRAGMA mmap_size = 4096000;',
             'PRAGMA page_size = 4096;',
             'PRAGMA cache_size = 1000;',
-            'PRAGMA journal_mode = PERSIST;',
+            'PRAGMA journal_mode = TRUNCATE;',
         ]
 
         if not self._table_updated:
@@ -275,7 +303,7 @@ class Storage(object):
             transaction_begin = len(sql_script) + 1
             sql_script.extend(('BEGIN;', 'COMMIT;', 'VACUUM;'))
             sql_script[transaction_begin:transaction_begin] = statements
-            self._execute(cursor, '\n'.join(sql_script), script=True)
+        self._execute(cursor, '\n'.join(sql_script), script=True)
 
         self._base._table_updated = True
         self._db = db
@@ -337,7 +365,7 @@ class Storage(object):
         query = self._sql['prune_by_size'].format(prune_size)
         if defer:
             return query
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             self._execute(cursor, query)
             self._execute(cursor, 'VACUUM')
         return True
@@ -358,7 +386,7 @@ class Storage(object):
         )
         if defer:
             return query
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             self._execute(cursor, query)
             self._execute(cursor, 'VACUUM')
         return True
@@ -366,7 +394,7 @@ class Storage(object):
     def _set(self, item_id, item, timestamp=None):
         values = self._encode(item_id, item, timestamp)
         optimize_query = self._optimize_item_count(1, defer=True)
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             if optimize_query:
                 self._execute(cursor, 'BEGIN')
                 self._execute(cursor, optimize_query)
@@ -389,7 +417,7 @@ class Storage(object):
             query = self._sql['set']
 
         optimize_query = self._optimize_item_count(num_items, defer=True)
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             self._execute(cursor, 'BEGIN')
             if optimize_query:
                 self._execute(cursor, optimize_query)
@@ -398,14 +426,14 @@ class Storage(object):
 
     def _update(self, item_id, item, timestamp=None):
         values = self._encode(item_id, item, timestamp, for_update=True)
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             self._execute(cursor, self._sql['update'], values=values)
 
     def clear(self, defer=False):
         query = self._sql['clear']
         if defer:
             return query
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             self._execute(cursor, query)
             self._execute(cursor, 'VACUUM')
         return True
@@ -443,7 +471,7 @@ class Storage(object):
         return timestamp, blob, size
 
     def _get(self, item_id, process=None, seconds=None, as_dict=False):
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             result = self._execute(cursor, self._sql['get'], [to_str(item_id)])
             item = result.fetchone() if result else None
             if not item:
@@ -481,7 +509,7 @@ class Storage(object):
 
         epoch = since_epoch()
         cut_off = epoch - seconds if seconds else 0
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             result = self._execute(cursor, query, item_ids)
             if as_dict:
                 if values_only:
@@ -512,12 +540,12 @@ class Storage(object):
         return result
 
     def _remove(self, item_id):
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             self._execute(cursor, self._sql['remove'], [item_id])
 
     def _remove_many(self, item_ids):
         num_ids = len(item_ids)
         query = self._sql['remove_by_key'].format('?,' * (num_ids - 1) + '?')
-        with self as (db, cursor), db:
+        with self._lock, self as (db, cursor), db:
             self._execute(cursor, query, tuple(item_ids))
             self._execute(cursor, 'VACUUM')
