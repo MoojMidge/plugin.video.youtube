@@ -116,8 +116,8 @@ class ServiceMonitor(xbmc.Monitor):
         return value
 
     def refresh_container(self, force=False):
-        self.set_property(REFRESH_CONTAINER)
         if force or self.is_plugin_container(check_all=True):
+            self.set_property(REFRESH_CONTAINER)
             xbmc.executebuiltin('Container.Refresh')
         else:
             self.refresh = True
