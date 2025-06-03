@@ -248,11 +248,11 @@ class XbmcPluginSettings(AbstractSettings):
             value = default
 
         if echo_level and self._echo:
-            if setting == 'youtube.location':
+            if setting == self.LOCATION:
                 log_value = 'xx.xxxx,xx.xxxx'
-            elif setting == 'youtube.api.id':
+            elif setting == self.API_ID:
                 log_value = '...'.join((value[:3], value[-5:]))
-            elif setting in {'youtube.api.key', 'youtube.api.secret'}:
+            elif setting in {self.API_KEY, self.API_SECRET}:
                 log_value = '...'.join((value[:3], value[-3:]))
             else:
                 log_value = value
@@ -277,11 +277,11 @@ class XbmcPluginSettings(AbstractSettings):
             error = exc
 
         if echo_level and self._echo:
-            if setting == 'youtube.location':
+            if setting == self.LOCATION:
                 log_value = 'xx.xxxx,xx.xxxx'
-            elif setting == 'youtube.api.id':
+            elif setting == self.API_ID:
                 log_value = '...'.join((value[:3], value[-5:]))
-            elif setting in {'youtube.api.key', 'youtube.api.secret'}:
+            elif setting in {self.API_KEY, self.API_SECRET}:
                 log_value = '...'.join((value[:3], value[-3:]))
             else:
                 log_value = value
