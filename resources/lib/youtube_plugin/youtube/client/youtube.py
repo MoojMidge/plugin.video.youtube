@@ -2884,6 +2884,7 @@ class YouTube(LoginClient):
         if params:
             if params.get('mine') or params.get('forMine'):
                 no_login = False
+                client_data.setdefault('_auth_required', True)
             client_data['params'] = params
 
         abort = False
