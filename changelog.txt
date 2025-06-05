@@ -1,3 +1,26 @@
+## v7.3.0+beta.1
+### Fixed
+- Add workarounds for various Kodi/ISA subtitle incompatibilities and formatting issues #489 #1147
+- Identify API requests requiring authentication
+- Fix incorrect page number used when post filling listings
+- Prevent unnecessary API requests when refreshing listing that uses channel filters
+- Improve loading of malformed/partial access_manager.json #1173
+
+### Changed
+- Disable script.trakt scrobbling when playing YouTube videos
+- Allow failure of unauthorised player requests to be ignored #1211
+- Try to prevent misuse of strm files #1208
+- Update thumbnails size settings and selection logic #1204
+- Only show folders in channel playlists listing on first page and if not hidden
+- Improve cache performance and reliability
+- Improve management of user data stored as JSON files
+
+### New
+- Add ability to create custom bookmarks #1208
+- Add subtitle type selection to stream features
+- Add plugin execution timeout to forcibly terminate execution after set time limit #1161
+- Improve addon logging using customised Python logging module
+
 ## v7.2.0.3
 ### Fixed
 - Fix performance regression with channel filters
