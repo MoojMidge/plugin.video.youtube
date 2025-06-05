@@ -1,3 +1,17 @@
+## v7.3.0+beta.1
+### Fixed
+- Identify API requests requiring authentication
+- Fix incorrect page number used when post filling listings
+- Prevent unnecessary API requests when refreshing listing that uses channel filters
+- Improve loading of malformed/partial access_manager.json #1173
+
+### Changed
+- Improve cache performance and reliability
+- Improve management of user data stored as JSON files
+
+### New
+- Improve addon logging using customised Python logging module
+
 ## v7.2.0.3
 ### Fixed
 - Fix performance regression with channel filters
