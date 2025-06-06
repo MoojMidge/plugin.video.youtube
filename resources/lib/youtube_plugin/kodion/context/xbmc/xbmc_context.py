@@ -30,6 +30,7 @@ from ...constants import (
     CONTENT,
     PLAY_FORCE_AUDIO,
     SORT,
+    VALUE_FROM_STR,
     WAKEUP,
 )
 from ...json_store import APIKeyStore, AccessManager
@@ -852,8 +853,10 @@ class XbmcContext(AbstractContext):
             return False
 
     def abort_requested(self):
-        return self.get_ui().get_property(ABORT_FLAG,
-                                          stacklevel=2).lower() == 'true'
+        return VALUE_FROM_STR.get(
+            self.get_ui().get_property(ABORT_FLAG, stacklevel=2),
+            False,
+        )
 
     @staticmethod
     def get_infobool(name):
