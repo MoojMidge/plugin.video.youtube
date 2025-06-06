@@ -2312,15 +2312,14 @@ class YouTube(LoginClient):
             counts = threads['counts']
             complete = False
             while not threads['balance'].is_set():
-                threads['loop'].set()
+                threads['loop_enable'].set()
                 if kwargs is True:
                     _kwargs = {}
                 elif kwargs:
                     _kwargs = {'inputs': kwargs} if do_batch else kwargs.pop()
                 elif check_inputs:
-                    if check_inputs.wait(0.1):
-                        if kwargs:
-                            continue
+                    if check_inputs.wait(0.1) and kwargs:
+                        continue
                     break
                 else:
                     complete = True
@@ -2344,7 +2343,7 @@ class YouTube(LoginClient):
                 counts[pool_id] -= 1
             counts['all'] -= 1
             threads['current'].discard(threading.current_thread())
-            threads['loop'].set()
+            threads['loop_enable'].set()
 
         max_threads = min(32, 2 * (available_cpu_count() + 4))
         counts = {
@@ -2356,7 +2355,7 @@ class YouTube(LoginClient):
         loop_enable = threading.Event()
         threads = {
             'balance': balance_enable,
-            'loop': loop_enable,
+            'loop_enable': loop_enable,
             'counter': counter,
             'counts': counts,
             'current': current_threads,
