@@ -818,6 +818,10 @@ class Provider(AbstractProvider):
                 provider, context, json_data,
                 item_filter={
                     'shorts': True,
+                    'live': True,
+                    'upcoming_live': True,
+                } if filtered_uploads else {
+                    'shorts': True,
                     'live': False,
                     'upcoming_live': False,
                 },

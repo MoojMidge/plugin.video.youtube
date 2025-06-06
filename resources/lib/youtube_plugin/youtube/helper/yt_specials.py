@@ -508,13 +508,13 @@ def _process_my_subscriptions(provider,
                 'live_folder': True,
                 'shorts': True,
             } if feed_type == 'live' else {
-                'live': False,
+                'live': True,
                 'shorts': True,
-                'upcoming_live': False,
+                'upcoming_live': True,
             } if feed_type == 'shorts' else {
-                'live': False,
+                'live': True,
                 'shorts': True,
-                'upcoming_live': False,
+                'upcoming_live': True,
             }
         ))
         return result, options
