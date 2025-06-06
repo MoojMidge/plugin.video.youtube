@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from . import logging
-from .constants import CHECK_SETTINGS
+from .constants import CHECK_SETTINGS, PATHS
 from .context import XbmcContext
 from .debug import Profiler
 from .plugin import XbmcPlugin
@@ -55,22 +55,32 @@ def run(context=_context,
         log.component_logging = False
         profiler.disable()
 
-    current_uri = context.get_uri()
-    current_path = context.get_path()
+    current_path = context.get_path().rstrip('/')
     current_params = context.get_params()
+    current_handle = context.get_handle()
     context.init()
-    new_uri = context.get_uri()
+    new_path = context.get_path().rstrip('/')
     new_params = context.get_params()
     new_handle = context.get_handle()
 
-    forced = (new_handle != -1
-              and ((current_uri == new_uri
-                    and current_path != '/'
-                    and current_params == new_params)
-                   or (current_uri != new_uri
-                       and current_path == '/'
-                       and not current_params)
-                   or (current_path == '/play/')))
+    forced = False
+    if new_handle != -1:
+        if current_path == PATHS.PLAY:
+            forced = True
+        elif current_path == new_path:
+            if current_path:
+                if current_params == new_params:
+                    forced = True
+                else:
+                    if 'refresh' in current_params:
+                        del current_params['refresh']
+                    if 'refresh' in new_params:
+                        del new_params['refresh']
+                    if current_params == new_params:
+                        forced = True
+        elif current_handle == -1 or current_handle == new_handle:
+            if not current_path and not current_params:
+                forced = True
     if forced:
         refresh = context.refresh_requested(force=True, off=True)
         if refresh:
@@ -87,13 +97,15 @@ def run(context=_context,
               'Python: v{python}',
               'Handle: {handle}',
               'Path:   |{path}|',
-              'Params: |{params}|'),
+              'Params: |{params}|',
+              'Forced: |{forced}|'),
              version=context.get_version(),
              kodi=str(system_version),
              python=system_version.get_python_version(),
              handle=new_handle,
-             path=context.get_path(),
-             params=log_params)
+             path=new_path,
+             params=log_params,
+             forced=forced)
 
     plugin.run(provider, context, forced=forced)
 
