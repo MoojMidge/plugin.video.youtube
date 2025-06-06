@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from re import (
-    UNICODE as re_UNICODE,
+    UNICODE,
     compile as re_compile,
 )
 
@@ -123,7 +123,7 @@ class AbstractProvider(object):
                 if not callable(func):
                     return None
 
-            cls._dict_path[re_compile(re_path, re_UNICODE)] = func
+            cls._dict_path[re_compile(re_path, UNICODE)] = func
             return command
 
         if command:

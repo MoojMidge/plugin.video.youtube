@@ -35,7 +35,7 @@ from ...kodion.compatibility import (
     urlunsplit,
     xbmcvfs,
 )
-from ...kodion.constants import PATHS, TEMP_PATH
+from ...kodion.constants import PATHS, TEMP_PATH, VALUE_TO_STR
 from ...kodion.network import get_connect_address
 from ...kodion.utils import (
     make_dirs,
@@ -2457,9 +2457,9 @@ class StreamInfo(YouTubeRequestClient):
                     # MPD spec. Should be a child Label element instead
                     ' name="[B]', label, '[/B]"'
                     # original / default / impaired are ISA specific attributes
-                    ' original="', str(original).lower(), '"'
-                    ' default="', str(default).lower(), '"'
-                    ' impaired="', str(impaired).lower(), '"'
+                    ' original="', VALUE_TO_STR[original], '"'
+                    ' default="', VALUE_TO_STR[default], '"'
+                    ' impaired="', VALUE_TO_STR[impaired], '"'
                     '>\n'
                 # AdaptationSet Label element not currently used by ISA
                 '\t\t\t<Label>', label, '</Label>\n'
@@ -2571,8 +2571,8 @@ class StreamInfo(YouTubeRequestClient):
                         # the MPD spec. Should be a child Label element instead
                         ' name="[B]', label, '[/B]"'
                         # original / default are ISA specific attributes
-                        ' original="', str(subtitle['original']).lower(), '"'
-                        ' default="', str(subtitle['default']).lower(), '"'
+                        ' original="', VALUE_TO_STR[subtitle['original']], '"'
+                        ' default="', VALUE_TO_STR[subtitle['default']], '"'
                         '>\n'
                     # AdaptationSet Label element not currently used by ISA
                     '\t\t\t<Label>', label, '</Label>\n'
