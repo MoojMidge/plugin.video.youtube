@@ -698,12 +698,8 @@ def response_to_items(provider,
                 if filtered_out:
                     filtered += len(filtered_out)
                     log.debugging and log.debug(
-                        ('Items filtered out: [',
-                         '\t{filtered_out}',
-                         ']'),
-                        filtered_out=',\n\t\t'.join(
-                            str(item) for item in filtered_out
-                        ),
+                        'Items filtered out: [\n\t%s\n]',
+                        ',\n\t'.join(map(str, filtered_out)),
                     )
 
             post_filler = json_data.get('_post_filler')
