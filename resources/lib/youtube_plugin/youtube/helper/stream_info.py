@@ -2550,6 +2550,7 @@ class StreamInfo(YouTubeRequestClient):
 
         if subs_data:
             translation_lang = localize('subtitles.translation')
+            headers = subs_data.pop('_headers', None)
             for lang_id, subtitle in subs_data.items():
                 lang_code = subtitle['lang']
                 label = language = subtitle['language']
@@ -2560,11 +2561,15 @@ class StreamInfo(YouTubeRequestClient):
                 else:
                     kind = lang_id
 
-                url = entity_escape(unquote(subtitle['url']))
+                url = entity_escape(unquote(self._process_url_params(
+                    subtitle['url'],
+                    headers=headers,
+                )))
 
                 output.extend((
                     '\t\t<AdaptationSet'
                         ' id="', str(set_id), '"'
+                        ' contentType="text"'
                         ' mimeType="', subtitle['mime_type'], '"'
                         ' lang="', lang_code, '"'
                         # name attribute is ISA specific and does not exist in
@@ -2582,8 +2587,10 @@ class StreamInfo(YouTubeRequestClient):
                         '/>\n'
                     '\t\t\t<Representation'
                         ' id="subs_', kind, '"'
+                        ' codecs="', subtitle['codec'], '"'
+                        ' mimeType="', subtitle['mime_type'], '"'
                         # unsure about what value to use for bandwidth
-                        ' bandwidth="0"'
+                        # ' bandwidth="0"'
                         '>\n'
                     '\t\t\t\t<BaseURL>', url, '</BaseURL>\n'
                     '\t\t\t</Representation>\n'
