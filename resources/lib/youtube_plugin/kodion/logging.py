@@ -55,6 +55,37 @@ class RecordFormatter(logging.Formatter):
         else:
             return None
 
+    def formatMessage(self, record):
+        try:
+            return self._style.format(record)
+        except AttributeError:
+            try:
+                return self._fmt % record.__dict__
+            except UnicodeDecodeError as e:
+                try:
+                    record.name = record.name.decode('utf-8')
+                    return self._fmt % record.__dict__
+                except UnicodeDecodeError:
+                    raise e
+
+    def format(self, record):
+        record.message = record.getMessage()
+        if self.usesTime():
+            record.asctime = self.formatTime(record, self.datefmt)
+        s = self.formatMessage(record)
+        if record.exc_info:
+            if not record.exc_text:
+                record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            if s[-1:] != '\n':
+                s += '\n'
+            s += record.exc_text
+        if record.stack_info:
+            if s[-1:] != '\n':
+                s += '\n'
+            s += self.formatStack(record.stack_info)
+        return s
+
 
 class MessageFormatter(object):
     __slots__ = (
@@ -84,13 +115,11 @@ class Handler(logging.Handler):
         logging.CRITICAL: xbmc.LOGFATAL,
     }
     STANDARD_FORMATTER = RecordFormatter(
-        fmt='[{addon_id}] {module}:{lineno}({funcName}) - {message}',
-        style='{',
+        fmt='[%(addon_id)s] %(module)s:%(lineno)d(%(funcName)s) - %(message)s',
     )
     DEBUG_FORMATTER = RecordFormatter(
-        fmt='[{addon_id}] {module}, line {lineno}, in {funcName}'
-            '\n\t{message}',
-        style='{',
+        fmt='[%(addon_id)s] %(module)s, line %(lineno)d, in %(funcName)s'
+            '\n\t%(message)s',
     )
 
     _stack_info = False
@@ -120,6 +149,13 @@ class Handler(logging.Handler):
     @stack_info.setter
     def stack_info(self, value):
         type(self)._stack_info = value
+
+
+class LogRecord(logging.LogRecord):
+    def __init__(self, *args, **kwargs):
+        stack_info = kwargs.pop('sinfo', None)
+        super(LogRecord, self).__init__(*args, **kwargs)
+        self.stack_info = stack_info
 
 
 class KodiLogger(logging.Logger):
@@ -206,7 +242,18 @@ class KodiLogger(logging.Logger):
                 target_frame_code.co_name,
                 stack_info)
 
-    def error_trace(self, msg, *args, stack_info=True, stacklevel=1, **kwargs):
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
+                   func=None, extra=None, sinfo=None):
+        rv = LogRecord(name, level, fn, lno, msg, args, exc_info, func,
+                       sinfo=sinfo)
+        if extra is not None:
+            for key in extra:
+                if (key in ["message", "asctime"]) or (key in rv.__dict__):
+                    raise KeyError("Attempt to overwrite %r in LogRecord" % key)
+                rv.__dict__[key] = extra[key]
+        return rv
+
+    def error_trace(self, msg, stack_info=True, stacklevel=1, *args, **kwargs):
         if self.isEnabledFor(ERROR):
             self._log(
                 ERROR,
@@ -217,7 +264,7 @@ class KodiLogger(logging.Logger):
                 **kwargs
             )
 
-    def debug_trace(self, msg, *args, stack_info=True, stacklevel=1, **kwargs):
+    def debug_trace(self, msg, stack_info=True, stacklevel=1, *args, **kwargs):
         if self.isEnabledFor(DEBUG):
             self._log(
                 DEBUG,
@@ -308,11 +355,11 @@ INFO = logging.INFO
 DEBUG = logging.DEBUG
 
 
-def exception(msg, *args, exc_info=True, **kwargs):
+def exception(msg, exc_info=True, *args, **kwargs):
     root.error(msg, *args, exc_info=exc_info, **kwargs)
 
 
-def error_trace(msg, *args, stack_info=True, stacklevel=1, **kwargs):
+def error_trace(msg, stack_info=True, stacklevel=1, *args, **kwargs):
     root.error(msg,
                *args,
                stack_info=stack_info,
@@ -320,7 +367,7 @@ def error_trace(msg, *args, stack_info=True, stacklevel=1, **kwargs):
                **kwargs)
 
 
-def debug_trace(msg, *args, stack_info=True, stacklevel=1, **kwargs):
+def debug_trace(msg, stack_info=True, stacklevel=1, *args, **kwargs):
     root.debug(msg,
                *args,
                stack_info=stack_info,
