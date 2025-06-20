@@ -1704,7 +1704,9 @@ class StreamInfo(YouTubeRequestClient):
                                          auth=_has_auth)
                         compare_reason = _reason.lower()
                         if any(why in compare_reason for why in reauth_reasons):
-                            if client_data.get('_auth_required'):
+                            if _client.get('_auth_required') == 'ignore_fail':
+                                continue
+                            elif client_data.get('_auth_required'):
                                 restart = False
                                 abort = True
                             elif restart is None and has_access_token:

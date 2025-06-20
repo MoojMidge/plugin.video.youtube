@@ -279,7 +279,11 @@ class YouTubeRequestClient(BaseRequestsClass):
                 'package_id': 'com.google.ios.youtubeunplugged',
                 'platform': 'MOBILE',
             },
-            '_auth_required': True,
+            # Authorised requests required for this client, but try request even
+            # if not authorised as visitorData is required for subsequent client
+            # requests
+            # '_auth_required': True,
+            '_auth_required': 'ignore_fail',
             '_auth_type': 'personal',
             '_query_subtitles': True,
             'json': {
@@ -722,7 +726,7 @@ class YouTubeRequestClient(BaseRequestsClass):
                     params = params.copy()
                     del params['key']
                     client['params'] = params
-            elif auth_required:
+            elif auth_required and auth_required != 'ignore_fail':
                 return None
             else:
                 headers = client['headers']
