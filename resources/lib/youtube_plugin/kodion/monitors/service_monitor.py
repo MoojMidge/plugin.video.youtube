@@ -99,20 +99,20 @@ class ServiceMonitor(xbmc.Monitor):
             'is_active': is_plugin and not _busy(),
         }
 
-    def clear_property(self, property_id, stacklevel=2):
+    def clear_property(self, property_id, stacklevel=2, raw=False):
         self.log.debug_trace('Clear property |{property_id}|',
                              property_id=property_id,
                              stacklevel=stacklevel)
-        _property_id = '-'.join((ADDON_ID, property_id))
+        _property_id = property_id if raw else '-'.join((ADDON_ID, property_id))
         xbmcgui.Window(10000).clearProperty(_property_id)
         return None
 
-    def set_property(self, property_id, value='true', stacklevel=2):
+    def set_property(self, property_id, value='true', stacklevel=2, raw=False):
         self.log.debug_trace('Set property |{property_id}|: {value!r}',
                              property_id=property_id,
                              value=value,
                              stacklevel=stacklevel)
-        _property_id = '-'.join((ADDON_ID, property_id))
+        _property_id = property_id if raw else '-'.join((ADDON_ID, property_id))
         xbmcgui.Window(10000).setProperty(_property_id, value)
         return value
 
