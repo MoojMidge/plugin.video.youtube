@@ -76,7 +76,12 @@ class XbmcPlugin(AbstractPlugin):
     def __init__(self):
         super(XbmcPlugin, self).__init__()
 
-    def run(self, provider, context, forced=None):
+    def run(self,
+            provider,
+            context,
+            forced=False,
+            is_same_path=False,
+            **kwargs):
         handle = context.get_handle()
         ui = context.get_ui()
 
