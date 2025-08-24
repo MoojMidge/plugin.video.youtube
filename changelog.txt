@@ -1,3 +1,15 @@
+## v7.3.0+beta.3
+### Fixed
+- Fix using locale specific abbreviations for weekday and month in If-Modified-Since header #1246
+- Workaround various Kodi 18 and Python 2 issues #1246
+- Fix inconsistencies between item IDs used as params that could result in exceptions
+- Fix generated page token not working for first page in listing
+- Don't replace non-standard JPEG thumbnails with WebP thumbnails #1245
+- Fix not parsing infolabels used in plugin url path #1239 #1243
+
+### Changed
+- Allow plugin url query parameters to hide folders in search and channel playlist listing #1251
+
 ## v7.3.0+beta.2
 ### Fixed
 - Fix not parsing infolabels used as plugin url query params #1239
