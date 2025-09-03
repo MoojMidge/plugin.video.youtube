@@ -1,3 +1,26 @@
+## v7.3.0+beta.4
+### Fixed
+- Exclude retrying player clients that do not support authentication if authentication is required #1273
+- Only request authenticated player request once, if not otherwise required #1273
+- Fix not updating breadcrumb after certain context menu actions
+- Fix setting focus on items in listing when parent item is not shown #1012
+- Reduce CPU usage of service runner loop when idle
+- Simplify window history fallback for search inputs #1070 #1266
+- Don't re-raise BrokenPipeError in RequestHandler.handle_one_request #1259
+- Fix including details in label2 mask when video details in listings is disabled #1265
+- Fix incorrect modification of custom thumbnails #1245
+- Refresh stale cached entries if new player data is available #1259
+- Disable use of captions from clients that are sometimes aggressively rate limited #1250
+
+### Changed
+- Disable unusable player clients #1273
+- Disable multiple busy dialog crash workarounds in Kodi 22
+- Include visitorData in subtitle request headers along with referer #1250
+- Revert use of WEBP thumbnails #1245
+- Improve notification of player request errors #1254 #1262
+  - Add notification if reCaptcha check is required
+- Improve workarounds for failing authorised player requests #1254
+
 ## v7.3.0+beta.3
 ### Fixed
 - Switch browse client for recommended videos #1254
