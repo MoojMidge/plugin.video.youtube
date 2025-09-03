@@ -34,6 +34,8 @@ from ...constants import (
     REFRESH_CONTAINER,
     RELOAD_ACCESS_MANAGER,
     REROUTE_PATH,
+    SORT_DIR,
+    SORT_METHOD,
     SYNC_LISTITEM,
     TRAKT_PAUSE_FLAG,
     VIDEO_ID,
@@ -412,7 +414,39 @@ class XbmcPlugin(AbstractPlugin):
             container = ui.get_property(CONTAINER_ID)
             position = ui.get_property(CONTAINER_POSITION)
 
+            # set alternative view mode
+            view_manager = ui.get_view_manager()
+            if view_manager.is_override_view_enabled():
+                post_run_actions.append((
+                    view_manager.apply_view_mode,
+                    {
+                        'context': context,
+                    },
+                ))
+
             if is_same_path:
+                sort_method = kwargs.get(SORT_METHOD)
+                if sort_method:
+                    post_run_actions.append((
+                        view_manager.apply_sort_method,
+                        {
+                            'context': context,
+                            SORT_METHOD: sort_method,
+                        },
+                    ))
+                    position = True
+
+                sort_dir = kwargs.get(SORT_DIR)
+                if sort_dir:
+                    post_run_actions.append((
+                        view_manager.apply_sort_dir,
+                        {
+                            'context': context,
+                            SORT_DIR: sort_dir,
+                        },
+                    ))
+                    position = True
+
                 if (container and position
                         and (forced or position is True)
                         and (not played_video_id or route)):
