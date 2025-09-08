@@ -22,6 +22,9 @@ from ..constants import (
     BUSY_FLAG,
     CHECK_SETTINGS,
     CONTAINER_FOCUS,
+    CONTAINER_ID,
+    CONTAINER_POSITION,
+    CURRENT_ITEM,
     FILE_READ,
     FILE_WRITE,
     HAS_PARENT,
@@ -343,9 +346,51 @@ class ServiceMonitor(xbmc.Monitor):
         elif event == CONTAINER_FOCUS:
             if data:
                 data = json.loads(data)
-            if not data or not self.is_plugin_container(check_all=True):
+            if not data:
                 return
-            xbmc.executebuiltin('SetFocus({0},{1},absolute)'.format(*data))
+
+            context = self._context
+            ui = context.get_ui()
+
+            container = ui.get_container()
+            if not all(container.values()):
+                return
+
+            container_id = data.get(CONTAINER_ID)
+            if container_id is None:
+                container_id = container['id']
+            elif not container_id:
+                return
+            if not isinstance(container_id, int):
+                try:
+                    container_id = int(container_id)
+                except (TypeError, ValueError):
+                    return
+
+            position = data.get(CONTAINER_POSITION)
+            if position is None:
+                return
+            if position == 'next':
+                position = 1
+                absolute_position = False
+            elif position == 'previous':
+                position = -1
+                absolute_position = False
+            else:
+                if position == 'current':
+                    position = ui.get_container_info(CURRENT_ITEM, container_id)
+                absolute_position = True
+                if not ui.get_container_bool(HAS_PARENT, container_id):
+                    try:
+                        position = int(position) - 1
+                    except (TypeError, ValueError):
+                        return
+
+            context.execute('SetFocus({0},{1}{2})'.format(
+                container_id,
+                position,
+                ',absolute' if absolute_position else '',
+            ))
 
         elif event == RELOAD_ACCESS_MANAGER:
             self._context.reload_access_manager()
