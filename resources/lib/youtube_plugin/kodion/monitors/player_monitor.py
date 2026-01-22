@@ -13,7 +13,7 @@ import json
 import threading
 
 from .. import logging
-from ..compatibility import xbmc
+from ..compatibility import parse_qsl, urlsplit, xbmc
 from ..constants import (
     BUSY_FLAG,
     CHANNEL_ID,
@@ -23,6 +23,7 @@ from ..constants import (
     PLAYER_DATA,
     PLAY_USING,
     REFRESH_CONTAINER,
+    SERVER_WAKEUP,
     TRAKT_PAUSE_FLAG,
     VIDEO_ID,
 )
@@ -375,6 +376,7 @@ class PlayerMonitor(xbmc.Player):
         self._monitor = monitor
         self._ui = self._context.get_ui()
         self.threads = []
+        self.player_data = None
         self.seeking = False
         self.seek_time = None
         self.start_time = None
@@ -422,13 +424,55 @@ class PlayerMonitor(xbmc.Player):
         self.threads = active_threads
 
     def onPlayBackStarted(self):
-        if not self._ui.busy_dialog_active():
-            self._ui.clear_property(BUSY_FLAG)
+        context = self._context
+        ui = self._ui
 
-        if self._ui.get_property(PLAY_USING):
-            self._context.execute('Action(SwitchPlayer)')
-            self._context.execute('Action(Stop)')
+        if not ui.busy_dialog_active():
+            ui.clear_property(BUSY_FLAG)
+
+        try:
+            playing_file = self.getPlayingFile()
+        except RuntimeError:
             return
+
+        if not playing_file:
+            return
+
+        playing_file = urlsplit(playing_file)
+        playing_path = playing_file.path
+        if (playing_path.startswith(PATHS.PLAY)
+                and context.is_plugin_path(playing_file)):
+            params = dict(parse_qsl(playing_file.query))
+            video_id = params.get('video_id')
+        elif playing_path.startswith(PATHS.MPD):
+            params = dict(parse_qsl(playing_file.query))
+            video_id = params.get('file')
+            if video_id:
+                video_id = video_id.partition('.')[0]
+        elif playing_path.startswith(PATHS.REDIRECT):
+            context.ipc_exec(SERVER_WAKEUP, timeout=5)
+            video_id = None
+        else:
+            return
+
+        if ui.get_property(PLAY_USING):
+            context.execute('Action(SwitchPlayer)')
+            context.execute('Action(Stop)')
+
+        player_data = ui.pop_property(PLAYER_DATA,
+                                      process=json.loads,
+                                      log_redact=True)
+        if not player_data and video_id:
+            provider = self._provider
+            player_data = provider.on_play_x(
+                provider,
+                context,
+                video_id=video_id,
+                reload=True
+            )
+            if not player_data:
+                return
+        self.player_data = player_data
 
     def onAVStarted(self):
         ui = self._ui
@@ -438,9 +482,7 @@ class PlayerMonitor(xbmc.Player):
         if not ui.busy_dialog_active():
             ui.clear_property(BUSY_FLAG)
 
-        player_data = ui.pop_property(PLAYER_DATA,
-                                      process=json.loads,
-                                      log_redact=True)
+        player_data = self.player_data
         if not player_data:
             return
         self.cleanup_threads()
@@ -474,6 +516,14 @@ class PlayerMonitor(xbmc.Player):
 
         self.stop_threads()
         self.cleanup_threads()
+
+        self.player_data = None
+        self.seeking = False
+        self.seek_time = None
+        self.start_time = None
+        self.end_time = None
+        self.current_time = 0.0
+        self.total_time = 0.0
 
     def onPlayBackStopped(self):
         self.onPlayBackEnded()

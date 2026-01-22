@@ -88,7 +88,7 @@ class Provider(AbstractProvider):
             '/(?P<command>[^/]+)/(?P<category>[^/]+)/?$',
         )), yt_playlist.process)
 
-        self.register_path(r''.join((
+        self.on_play_x = self.register_path(r''.join((
             '^',
             PATHS.PLAY,
             '/?$',
