@@ -49,13 +49,15 @@ from ...kodion.utils.datetime import datetime_to_since
 from ...kodion.utils.redact import redact_params
 
 
-def _play_stream(provider, context):
+def _play_stream(provider, context, video_id=None, reload=False):
     ui = context.get_ui()
     params = context.get_params()
-    video_id = params.get(VIDEO_ID)
+    if video_id is None:
+        video_id = params.get(VIDEO_ID)
     if not video_id:
-        ui.show_notification(context.localize('error.no_streams_found'))
         logging.error('No video_id provided')
+        if not reload:
+            ui.show_notification(context.localize('error.no_streams_found'))
         return False
 
     client = provider.get_client(context)
@@ -83,6 +85,9 @@ def _play_stream(provider, context):
                    and settings.use_mpd_videos()
                    and context.ipc_exec(SERVER_WAKEUP, timeout=5))
 
+        if reload:
+            ask_for_quality = False
+
         try:
             streams, yt_item = client.load_stream_info(
                 video_id=video_id,
@@ -93,12 +98,14 @@ def _play_stream(provider, context):
             )
         except YouTubeException as exc:
             logging.exception('Error')
-            ui.show_notification(message=exc.get_message())
+            if not reload:
+                ui.show_notification(message=exc.get_message())
             return False
 
         if not streams:
-            ui.show_notification(context.localize('error.no_streams_found'))
             logging.error('No streams found')
+            if not reload:
+                ui.show_notification(context.localize('error.no_streams_found'))
             return False
 
         stream = _select_stream(
@@ -113,11 +120,14 @@ def _play_stream(provider, context):
 
     video_type = stream.get('video')
     if video_type and video_type.get('rtmpe'):
-        ui.show_notification(context.localize('error.rtmpe_not_supported'))
         logging.error('RTMPE streams are not supported')
+        if not reload:
+            ui.show_notification(context.localize('error.rtmpe_not_supported'))
         return False
 
-    if not screensaver and settings.get_bool(settings.PLAY_SUGGESTED):
+    if (not reload
+            and not screensaver
+            and settings.get_bool(settings.PLAY_SUGGESTED)):
         utils.add_related_video_to_playlist(provider,
                                             context,
                                             client,
@@ -163,6 +173,8 @@ def _play_stream(provider, context):
     play_count = use_local_history and media_item.get_play_count() or 0
     playback_stats = stream.get('playback_stats')
 
+    ui.set_property(TRAKT_PAUSE_FLAG, raw=True)
+
     playback_data = {
         VIDEO_ID: video_id,
         CHANNEL_ID: metadata.get('channel', {}).get('id', ''),
@@ -178,13 +190,15 @@ def _play_stream(provider, context):
         'clip': params.get('clip', False),
         'refresh_only': screensaver
     }
+    context.send_notification(PLAYBACK_INIT, playback_data)
+
+    if reload:
+        return playback_data
 
     ui.set_property(PLAYER_DATA,
                     value=playback_data,
                     process=json.dumps,
                     log_redact=True)
-    ui.set_property(TRAKT_PAUSE_FLAG, raw=True)
-    context.send_notification(PLAYBACK_INIT, playback_data)
     return media_item
 
 
@@ -497,7 +511,7 @@ def process_items_for_playlist(context,
     return items[position - 1]
 
 
-def process(provider, context, **_kwargs):
+def process(provider, context, video_id=None, reload=False, **_kwargs):
     """
     Plays a video, playlist, or channel live stream.
 
@@ -519,6 +533,9 @@ def process(provider, context, **_kwargs):
     * CHANNEL_ID: YouTube Channel ID
     * X: optional index of live stream to play if channel has multiple live streams. 1 (default) for first live stream
     """
+    if reload and video_id:
+        return _play_stream(provider, context, video_id, reload)
+
     ui = context.get_ui()
 
     params = context.get_params()
