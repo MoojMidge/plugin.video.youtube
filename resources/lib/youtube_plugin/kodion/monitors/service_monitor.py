@@ -117,17 +117,22 @@ class ServiceMonitor(xbmc.Monitor):
                 self.interrupt = True
 
             elif method == 'Player.OnPlay':
-                player = xbmc.Player()
                 try:
-                    playing_file = urlsplit(player.getPlayingFile())
-                    if playing_file.path in {PATHS.MPD,
-                                             PATHS.PLAY,
-                                             PATHS.REDIRECT}:
-                        self.start_httpd()
-                        if self.httpd_sleep_allowed:
-                            self.httpd_sleep_allowed = None
+                    playing_file = xbmc.Player().getPlayingFile()
                 except RuntimeError:
-                    pass
+                    return
+
+                if not playing_file:
+                    return
+
+                playing_file = urlsplit(playing_file)
+                playing_path = playing_file.path
+                if ((playing_path.startswith(PATHS.PLAY)
+                     and self._context.is_plugin_path(playing_file))
+                        or playing_path in {PATHS.MPD, PATHS.REDIRECT}):
+                    self.start_httpd()
+                    if self.httpd_sleep_allowed:
+                        self.httpd_sleep_allowed = None
 
             elif method == 'Playlist.OnAdd':
                 context = self._context

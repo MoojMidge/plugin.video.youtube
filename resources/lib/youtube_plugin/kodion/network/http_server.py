@@ -280,30 +280,48 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             self.wfile.write(client_json.encode('utf-8'))
 
         elif path['path'].startswith(PATHS.MPD):
-            try:
-                file = path['params'].get('file', empty)[0]
-                if file:
-                    file_path = os.path.join(self.BASE_PATH, file)
-                else:
-                    file_path = None
-                    raise IOError
+            file_name = path['params'].get('file', empty)[0]
+            if file_name:
+                file_path = os.path.join(self.BASE_PATH, file_name)
+            else:
+                self.send_error(
+                    code=400,
+                    message='No File Requested: %r' % path['log_uri'],
+                )
+                return
 
-                file_size = os.path.getsize(file_path)
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/dash+xml')
-                self.send_header('Content-Length', str(file_size))
-                self.end_headers()
+            _, timeout = settings.requests_timeout()
+            timeout_step = 1
+            timeout = max(timeout_step * 5, timeout)
 
-                with open(file_path, mode='rb', buffering=self.chunk_size) as f:
-                    while 1:
-                        file_chunk = f.read()
-                        if not file_chunk:
-                            break
-                        self.wfile.write(file_chunk)
-            except IOError:
-                response = ('File Not Found: {uri!r} -> {file_path!r}'
-                            .format(uri=path['log_uri'], file_path=file_path))
-                self.send_error(404, response)
+            while timeout > 0:
+                try:
+                    with open(file_path,
+                              mode='rb',
+                              buffering=self.chunk_size) as file_stream:
+                        file_size = os.path.getsize(file_path)
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/dash+xml')
+                        self.send_header('Content-Length', str(file_size))
+                        self.end_headers()
+                        while 1:
+                            file_chunk = file_stream.read()
+                            if not file_chunk:
+                                break
+                            self.wfile.write(file_chunk)
+                except IOError:
+                    context.sleep(timeout_step)
+                    timeout -= timeout_step
+                    continue
+                break
+            else:
+                self.send_error(
+                    code=404,
+                    message='File Not Found: %r -> %r' % (
+                        path['log_uri'],
+                        file_path,
+                    )
+                )
 
         elif path['path'] == PATHS.API and settings.api_config_page():
             html = self.api_config_page()
@@ -601,26 +619,45 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             self.send_error(403)
             return
 
+        context = self._context
+
         empty = [None]
 
         if path['path'].startswith(PATHS.MPD):
-            try:
-                file = path['params'].get('file', empty)[0]
-                if file:
-                    file_path = os.path.join(self.BASE_PATH, file)
-                else:
-                    file_path = None
-                    raise IOError
+            file_name = path['params'].get('file', empty)[0]
+            if file_name:
+                file_path = os.path.join(self.BASE_PATH, file_name)
+            else:
+                self.send_error(
+                    code=400,
+                    message='No File Requested: %r' % path['log_uri'],
+                )
+                return
 
-                file_size = os.path.getsize(file_path)
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/dash+xml')
-                self.send_header('Content-Length', str(file_size))
-                self.end_headers()
-            except IOError:
-                response = ('File Not Found: {uri!r} -> {file_path!r}'
-                            .format(uri=path['log_uri'], file_path=file_path))
-                self.send_error(404, response)
+            _, timeout = context.get_settings().requests_timeout()
+            timeout_step = 1
+            timeout = max(timeout_step * 5, timeout)
+
+            while timeout > 0:
+                try:
+                    file_size = os.path.getsize(file_path)
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/dash+xml')
+                    self.send_header('Content-Length', str(file_size))
+                    self.end_headers()
+                except IOError:
+                    context.sleep(timeout_step)
+                    timeout -= timeout_step
+                    continue
+                break
+            else:
+                self.send_error(
+                    code=404,
+                    message='File Not Found: %r -> %r' % (
+                        path['log_uri'],
+                        file_path,
+                    )
+                )
 
         elif path['path'].startswith(PATHS.REDIRECT):
             self.send_error(404)
