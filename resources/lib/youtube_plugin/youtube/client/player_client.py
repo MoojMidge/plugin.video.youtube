@@ -1774,19 +1774,22 @@ class YouTubePlayerClient(YouTubeDataClient):
                             client_data['_visitor_data'] = visitor_data
                             self._visitor_data[visitor_data_key] = visitor_data
 
-                    _video_details = _result.get('videoDetails', {})
                     _microformat = (_result
                                     .get('microformat', {})
                                     .get('playerMicroformatRenderer'))
                     _streaming_data = _result.get('streamingData', {})
                     _playability = _result.get('playabilityStatus', {})
                     if _playability:
+                        _error = None
                         _status = _playability.get('status', 'ERROR').upper()
                         _reason = _playability.get('reason', 'UNKNOWN')
                     else:
                         _error = _result.get('error', {})
                         _status = _error.get('status', 'ERROR').upper()
                         _reason = _error.get('message', 'UNKNOWN')
+
+                    if _result and _playability and not _error:
+                        _video_details = _result.get('videoDetails', {})
 
                     if (_video_details
                             and video_id != _video_details.get('videoId')):
@@ -1903,6 +1906,13 @@ class YouTubePlayerClient(YouTubeDataClient):
                 if (not client_data.get('_auth_required')
                         and video_details.get('isPrivate')):
                     client_data['_auth_required'] = True
+
+            elif _video_details and not video_details:
+                video_details = merge_dicts(
+                    _video_details,
+                    video_details,
+                    compare_str=True,
+                )
 
         if not responses:
             if _status == 'LIVE_STREAM_OFFLINE':
