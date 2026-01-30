@@ -940,6 +940,8 @@ class YouTubeRequestClient(BaseRequestsClass):
             if auth_type:
                 auth_token = client.get('_access_tokens', {}).get(auth_type)
                 api_key = client.get('_api_keys', {}).get(auth_type)
+                if not auth_token:
+                    has_auth = False
             else:
                 auth_token = None
                 api_key = None
