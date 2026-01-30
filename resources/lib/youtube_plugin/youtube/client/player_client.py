@@ -1721,7 +1721,7 @@ class YouTubePlayerClient(YouTubeDataClient):
                     _client = self.build_client(_client_name, client_data)
                     if _client:
                         _has_auth = _client.get('_has_auth')
-                        if _has_auth or _has_auth is False:
+                        if _has_auth is not None:
                             exclude_retry.add(_client_name)
                     else:
                         _has_auth = None
@@ -1825,7 +1825,7 @@ class YouTubePlayerClient(YouTubeDataClient):
                         fail_reason = _reason.lower()
 
                         if any(why in fail_reason for why in fail['auth']):
-                            if _has_auth:
+                            if _has_auth is not None:
                                 restart = False
                             elif restart is None and logged_in:
                                 client_data['_auth_requested'] = True
@@ -1833,6 +1833,8 @@ class YouTubePlayerClient(YouTubeDataClient):
                             continue
 
                         if any(why in fail_reason for why in fail['reauth']):
+                            if _has_auth:
+                                continue
                             if _client.get('_auth_required') == 'ignore_fail':
                                 continue
                             if client_data.get('_auth_required'):
