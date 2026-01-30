@@ -34,6 +34,7 @@ class YouTubeRequestClient(BaseRequestsClass):
     V1_API_URL = BASE_URL + '/youtubei/v1/{_endpoint}'
     V3_API_URL = 'https://www.googleapis.com/youtube/v3/{_endpoint}'
     WATCH_URL = BASE_URL + '/watch?v={_video_id}'
+    EMBED_URL = 'https://www.google.com'
 
     CLIENTS = {
         # Disabled - requires PO token
@@ -43,7 +44,7 @@ class YouTubeRequestClient(BaseRequestsClass):
             '_id': {
                 'client_id': 3,
                 'client_name': 'ANDROID',
-                'client_version': '20.10.38',
+                'client_version': '21.02.35',
                 'android_sdk_version': '32',
                 'os_name': 'Android',
                 'os_version': '15',
@@ -279,10 +280,11 @@ class YouTubeRequestClient(BaseRequestsClass):
                     },
                 },
                 'thirdParty': {
-                    'embedUrl': BASE_URL,
+                    'embedUrl': EMBED_URL,
                 },
             },
             'headers': {
+                'Referer': EMBED_URL,
                 'User-Agent': (
                     '{_id[package_id]}/{_id[client_version]}'
                     ' (Linux; U;'
@@ -297,7 +299,7 @@ class YouTubeRequestClient(BaseRequestsClass):
             '_id': {
                 'client_id': 5,
                 'client_name': 'IOS',
-                'client_version': '20.20.7',
+                'client_version': '21.02.3',
                 'device_make': 'Apple',
                 'device_model': 'iPhone16,2',
                 'os_name': 'iOS',
@@ -345,7 +347,7 @@ class YouTubeRequestClient(BaseRequestsClass):
             '_id': {
                 'client_id': 5,
                 'client_name': 'IOS',
-                'client_version': '20.20.7',
+                'client_version': '21.02.3',
                 'device_make': 'Apple',
                 'device_model': 'iPhone16,2',
                 'os_name': 'iOS',
@@ -475,26 +477,20 @@ class YouTubeRequestClient(BaseRequestsClass):
         'tv': {
             '_id': {
                 'browser_name': 'SamsungBrowser',
-                'browser_version': '9.2',
+                'browser_version': '8.0',
                 'client_id': 7,
                 'client_name': 'TVHTML5',
-                'client_version': '7.20250923.13.00',
+                'client_version': '7.20260114.12.00',
                 'device_make': 'Samsung',
                 'device_model': 'SmartTV',
                 'os_name': 'Tizen',
-                'os_major': '4',
+                'os_major': '9',
                 'os_minor': '0',
                 'os_patch': '0',
-                'os_build': '2',
+                'os_build': '0',
                 'platform': 'TV',
             },
             '_auth_type': 'tv',
-            '_auth_user_agent': (
-                'Mozilla/5.0'
-                ' (ChromiumStylePlatform)'
-                ' Cobalt/25.lts.30.1034943-gold (unlike Gecko)'
-                ' Unknown_TV_Unknown_0/Unknown (Unknown, Unknown)'
-            ),
             '_use_subtitles': 'optional',
             'url': V1_API_URL,
             'method': None,
@@ -519,8 +515,13 @@ class YouTubeRequestClient(BaseRequestsClass):
             'headers': {
                 'User-Agent': (
                     'Mozilla/5.0'
-                    ' (ChromiumStylePlatform)'
-                    ' Cobalt/Version'
+                    ' ({_id[device_model]}; Linux;'
+                    ' {_id[os_name]} {_id[os_major]}.{_id[os_minor]})'
+                    ' AppleWebkit/537.36 (KHTML, like Gecko)'
+                    ' Chrome/120.0.6099.5'
+                    ' {_id[browser_name]}/{_id[browser_version]}'
+                    ' {_id[platform]}'
+                    ' Safari/537.36'
                 ),
                 'X-YouTube-Client-Name': '{_id[client_id]}',
                 'X-YouTube-Client-Version': '{_id[client_version]}',
@@ -552,10 +553,11 @@ class YouTubeRequestClient(BaseRequestsClass):
                     },
                 },
                 'thirdParty': {
-                    'embedUrl': 'https://www.google.com/',
+                    'embedUrl': EMBED_URL,
                 },
             },
             'headers': {
+                'Referer': EMBED_URL,
                 'User-Agent': (
                     'Mozilla/5.0'
                     ' (ChromiumStylePlatform)'
@@ -571,6 +573,7 @@ class YouTubeRequestClient(BaseRequestsClass):
                 'client_name': 'TVHTML5_UNPLUGGED',
                 'client_version': '6.36',
             },
+            '_auth_required': True,
             '_auth_type': 'user',
             '_auth_user_agent': (
                 'Mozilla/5.0'
@@ -601,7 +604,7 @@ class YouTubeRequestClient(BaseRequestsClass):
             '_id': {
                 'client_id': 2,
                 'client_name': 'MWEB',
-                'client_version': '2.20250311.03.00',
+                'client_version': '2.20260115.01.00',
                 'device_make': 'Apple',
                 'device_model': 'iPad',
                 'os_name': 'OS',
@@ -645,7 +648,7 @@ class YouTubeRequestClient(BaseRequestsClass):
             '_id': {
                 'client_id': 1,
                 'client_name': 'WEB',
-                'client_version': '2.20250925.01.00',
+                'client_version': '2.20260114.08.00',
             },
             '_auth_type': False,
             'json': {
