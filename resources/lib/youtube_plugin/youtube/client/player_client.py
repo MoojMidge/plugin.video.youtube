@@ -796,6 +796,7 @@ class YouTubePlayerClient(YouTubeDataClient):
         'LOGIN_REQUIRED',
         'CONTENT_NOT_AVAILABLE_IN_THIS_APP',
         'ERROR',
+        'UNAUTHENTICATED',
         'UNPLAYABLE',
     ))
     FAILURE_REASONS = {
@@ -813,6 +814,8 @@ class YouTubePlayerClient(YouTubeDataClient):
             'member',
         )),
         'ignore': frozenset((
+            'authentication credential',
+            'reloaded',
             'try again later',
             'unavailable',
             'unknown',
@@ -861,6 +864,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             ('auth_enabled|initial_request|no_playable_streams', (
                 'tv_unplugged',
                 'tv',
+                'web',  # used when not logged in
             )),
             ('auth_disabled|kids|av1|vp9|vp9.2|avc1|stereo_sound|multi_audio', (
                 'ios_testsuite_params',
