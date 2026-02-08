@@ -854,6 +854,7 @@ class YouTubePlayerClient(YouTubeDataClient):
         self._calculate_n = False
         self._cipher = False
 
+        self._signature_timestamp = None
         self._visitor_data = {
             'current': None,
             INCOGNITO: None,
@@ -861,7 +862,7 @@ class YouTubePlayerClient(YouTubeDataClient):
         self._visitor_data_key = 'current'
         self._client_groups = (
             ('custom', clients if clients else ()),
-            ('auth_enabled|initial_request|no_playable_streams', (
+            ('initial_request|auth_enabled|no_playable_streams', (
                 'tv_unplugged',
                 'tv',
                 'web',  # used when not logged in
@@ -1002,40 +1003,92 @@ class YouTubePlayerClient(YouTubeDataClient):
         ))
         return yt_format
 
-    def _get_player_config(self, client_name='web', embed=False):
+    def _get_player_html(self, client_name='tv', embed=False, auth_type=False):
         video_id = self.video_id
+
         if embed:
             url = self.BASE_URL + '/embed/%s' % video_id
         else:
             url = self.WATCH_URL.format(_video_id=video_id)
-        # Manually configured cookies to avoid cookie consent redirect
-        cookies = {'SOCS': 'CAISAiAD'}
 
-        client_data = {'json': {'videoId': self.video_id}}
+        if auth_type:
+            auth_requested = True
+            if auth_type is True:
+                auth_type = 'user'
+        else:
+            auth_requested = False
+            auth_type = False
+
+        client_data = {
+            # Manually configured cookies to avoid cookie consent redirect
+            'cookies': {
+                'SOCS': 'CAISAiAD',
+            },
+            'json': None,
+            'url': url,
+            'method': 'GET',
+            '_auth_requested': auth_requested,
+            '_auth_type': auth_type,
+            '_access_tokens': {
+                'user': (self._access_tokens.get('user')
+                         if (self._configs.get('user', {})
+                             .get('token-allowed', True)) else
+                         None),
+                'tv': self._access_tokens.get('tv'),
+                'vr': self._access_tokens.get('vr'),
+            },
+            '_signature_timestamp': self._signature_timestamp,
+            '_visitor_data': self._visitor_data[self._visitor_data_key]
+        }
         client = self.build_client(client_name, client_data)
-
-        result = self.request(
-            url,
-            cookies=cookies,
-            headers=client['headers'],
-            response_hook=self._response_hook_text,
-            error_title='Failed to get player html',
-            video_id=self.video_id,
-            error_hook=self._player_error_hook,
-            client_name=client_name,
-            has_auth=False,
-            cache=False,
-        )
-        if not result:
+        if not client:
             return None
 
+        result = self.request(
+            response_hook=self._response_hook_text,
+            error_title='Failed to get player html',
+            error_hook=self._player_error_hook,
+            video_id=video_id,
+            client_name=client_name,
+            has_auth=client.get('_has_auth'),
+            has_visitor_data=bool(client.get('_visitor_data')),
+            cache=False,
+            pass_data=True,
+            raise_exc=False,
+            **client
+        )
+        return result
+
+    def _get_player_response(self,
+                             html=None,
+                             yt_initial_player_response_re=re_compile(
+                                 r'ytInitialPlayerResponse\s*=\s*'
+                                 r'({.+?})'
+                                 r'\s*;\s*</script>'
+                             )):
+        if html is None:
+            html = self._get_player_html(client_name='tv', auth_type='tv')
+        match = yt_initial_player_response_re.search(html)
+        if match:
+            return json_loads(match.group(1))
+        return {}
+
+    def _get_player_config(self,
+                           html=None,
+                           yt_cfg_re=re_compile(
+                               r'ytcfg\.set\s*\(\s*'
+                               r'({.+?})'
+                               r'\s*\)\s*;'
+                           )):
+        if html is None:
+            html = self._get_player_html(client_name='tv', auth_type='tv')
         # pattern source is from youtube-dl
         # https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/extractor/youtube.py#L313
         # LICENSE: The Unlicense
-        match = re_compile(r'ytcfg\.set\s*\(\s*({.+?})\s*\)\s*;').search(result)
+        match = yt_cfg_re.search(html)
         if match:
             return json_loads(match.group(1))
-        return None
+        return {}
 
     @staticmethod
     def _get_player_client(config):
@@ -1645,6 +1698,32 @@ class YouTubePlayerClient(YouTubeDataClient):
         else:
             self._use_mpd = use_mpd
 
+        _html = self._get_player_html(client_name='tv', auth_type='tv')
+        if _html:
+            _result = self._get_player_response(_html)
+            _yt_cfg = self._get_player_config(_html)
+        else:
+            _result = None
+            _yt_cfg = None
+
+        if _result:
+            video_details = _result.get('videoDetails', {})
+        else:
+            video_details = {}
+
+        if _yt_cfg:
+            signature_timestamp = _yt_cfg.get('STS')
+            if signature_timestamp:
+                self._signature_timestamp = signature_timestamp
+
+            visitor_data = _yt_cfg.get('VISITOR_DATA')
+            if visitor_data:
+                self._visitor_data[visitor_data_key] = visitor_data
+        else:
+            signature_timestamp = self._signature_timestamp
+            visitor_data = self._visitor_data[visitor_data_key]
+        has_visitor_data = bool(visitor_data)
+
         context = self._context
         settings = context.get_settings()
         age_gate_enabled = settings.age_gate()
@@ -1653,7 +1732,6 @@ class YouTubePlayerClient(YouTubeDataClient):
         _client_name = None
         _client = None
         _has_auth = None
-        _result = None
         _video_details = None
         _microformat = None
         _streaming_data = None
@@ -1662,9 +1740,6 @@ class YouTubePlayerClient(YouTubeDataClient):
         _reason = None
 
         auth_client = None
-        visitor_data = self._visitor_data[visitor_data_key]
-        has_visitor_data = bool(visitor_data)
-        video_details = {}
         microformat = {}
         responses = {}
         stream_list = {}
@@ -1690,6 +1765,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             },
             '_endpoint': 'player',
             '_cpn': None,
+            '_signature_timestamp': signature_timestamp,
             '_visitor_data': visitor_data,
         }
         if use_remote_history:
@@ -1703,8 +1779,8 @@ class YouTubePlayerClient(YouTubeDataClient):
                 continue
             if name == 'ask' and use_mpd and not ask_for_quality:
                 continue
-            if name.startswith('auth_enabled|initial_request'):
-                if video_details and visitor_data and not logged_in:
+            if name.startswith('initial_request'):
+                if video_details and has_visitor_data:
                     continue
                 allow_skip = False
                 client_data['_auth_requested'] = True

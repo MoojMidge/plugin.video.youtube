@@ -511,6 +511,14 @@ class YouTubeRequestClient(BaseRequestsClass):
                         'platform': '{_id[platform]}',
                     },
                 },
+                'attestationRequest': {
+                    'omitBotguardData': True,
+                },
+                'playbackContext': {
+                    'contentPlaybackContext': {
+                        'signatureTimestamp': ValueError,
+                    },
+                },
             },
             'headers': {
                 'User-Agent': (
@@ -555,6 +563,11 @@ class YouTubeRequestClient(BaseRequestsClass):
                 'thirdParty': {
                     'embedUrl': EMBED_URL,
                 },
+                'playbackContext': {
+                    'contentPlaybackContext': {
+                        'signatureTimestamp': ValueError,
+                    },
+                },
             },
             'headers': {
                 'Referer': EMBED_URL,
@@ -587,6 +600,11 @@ class YouTubeRequestClient(BaseRequestsClass):
                     'client': {
                         'clientName': '{_id[client_name]}',
                         'clientVersion': '{_id[client_version]}',
+                    },
+                },
+                'playbackContext': {
+                    'contentPlaybackContext': {
+                        'signatureTimestamp': ValueError,
                     },
                 },
             },
@@ -624,6 +642,11 @@ class YouTubeRequestClient(BaseRequestsClass):
                         'clientVersion': '{_id[client_version]}',
                     },
                 },
+                'playbackContext': {
+                    'contentPlaybackContext': {
+                        'signatureTimestamp': ValueError,
+                    },
+                },
             },
             'headers': {
                 'User-Agent': (
@@ -656,6 +679,11 @@ class YouTubeRequestClient(BaseRequestsClass):
                     'client': {
                         'clientName': '{_id[client_name]}',
                         'clientVersion': '{_id[client_version]}',
+                    },
+                },
+                'playbackContext': {
+                    'contentPlaybackContext': {
+                        'signatureTimestamp': ValueError,
                     },
                 },
             },
@@ -926,6 +954,17 @@ class YouTubeRequestClient(BaseRequestsClass):
                 client_config['visitorData'] = visitor_data
             if headers is not None:
                 headers['X-Goog-Visitor-Id'] = visitor_data
+
+        signature_timestamp = client.get('_signature_timestamp')
+        if signature_timestamp:
+            if playback_context is not None:
+                playback_context['signatureTimestamp'] = signature_timestamp
+            if headers is not None:
+                headers['X-YouTube-STS'] = str(signature_timestamp)
+        elif playback_context:
+            client_json = client_json.copy()
+            del client_json['playbackContext']
+            client['json'] = client_json
 
         for values, template_id, template in templates.values():
             if template_id in values:
