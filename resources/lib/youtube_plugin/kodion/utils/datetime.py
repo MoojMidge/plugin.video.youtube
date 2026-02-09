@@ -16,6 +16,7 @@ from re import compile as re_compile
 from sys import modules
 from time import gmtime, strftime
 
+from ..compatibility import xbmc
 from ..exceptions import KodionException
 
 
@@ -49,7 +50,7 @@ __INTERNAL_CONSTANTS__ = {
     'epoch_dt_utc': (
         datetime.fromtimestamp(0, tz=timezone.utc)
         if timezone else
-        None
+        datetime.utcfromtimestamp(0)
     ),
     'local_offset': None,
     'Jan': 1,
@@ -71,6 +72,7 @@ __INTERNAL_CONSTANTS__ = {
 
 now = datetime.now
 fromtimestamp = datetime.fromtimestamp
+date_types = (date, datetime)
 
 
 def parse_to_dt(datetime_string):
@@ -146,21 +148,30 @@ def parse_to_dt(datetime_string):
                           .format(datetime=datetime_string))
 
 
-def get_scheduled_start(context, datetime_object, local=True):
+def get_scheduled_start(dt, local=True):
     if timezone:
         _now = now(tz=timezone.utc)
+        if not isinstance(dt, datetime):
+            dt = fromtimestamp(float(dt), tz=timezone.utc)
         if local:
             _now = _now.astimezone(None)
+            dt = dt.astimezone(None)
+    elif local:
+        _now = now()
+        if not isinstance(dt, datetime):
+            dt = fromtimestamp(float(dt))
     else:
-        _now = now() if local else datetime.utcnow()
+        _now = datetime.utcnow()
+        if not isinstance(dt, datetime):
+            dt = datetime.utcfromtimestamp(float(dt))
 
-    if datetime_object.date() == _now.date():
+    if dt.date() == _now.date():
         return '@ {start_time}'.format(
-            start_time=context.format_time(datetime_object.time())
+            start_time=format_time(dt.time())
         )
     return '@ {start_date}, {start_time}'.format(
-        start_time=context.format_time(datetime_object.time()),
-        start_date=context.format_date_short(datetime_object.date())
+        start_time=format_time(dt.time()),
+        start_date=format_date_short(dt.date())
     )
 
 
@@ -177,17 +188,48 @@ def utc_to_local(dt):
     return dt + offset
 
 
-def datetime_to_since(context, dt, local=True, as_seconds=False):
+def datetime_elapsed(dt, elapsed=0, local=True):
     if timezone:
         _now = now(tz=timezone.utc)
+        if not isinstance(dt, datetime):
+            dt = fromtimestamp(float(dt), tz=timezone.utc)
         if local:
             _now = _now.astimezone(None)
+            dt = dt.astimezone(None)
+    elif local:
+        _now = now()
+        if not isinstance(dt, datetime):
+            dt = fromtimestamp(float(dt))
     else:
-        _now = now() if local else datetime.utcnow()
+        _now = datetime.utcnow()
+        if not isinstance(dt, datetime):
+            dt = datetime.utcfromtimestamp(float(dt))
 
     diff = _now - dt
     seconds = diff.total_seconds()
-    if as_seconds:
+    return seconds >= elapsed
+
+
+def datetime_to_since(dt, context=None, local=True, as_seconds=False):
+    if timezone:
+        _now = now(tz=timezone.utc)
+        if not isinstance(dt, datetime):
+            dt = fromtimestamp(float(dt), tz=timezone.utc)
+        if local:
+            _now = _now.astimezone(None)
+            dt = dt.astimezone(None)
+    elif local:
+        _now = now()
+        if not isinstance(dt, datetime):
+            dt = fromtimestamp(float(dt))
+    else:
+        _now = datetime.utcnow()
+        if not isinstance(dt, datetime):
+            dt = datetime.utcfromtimestamp(float(dt))
+
+    diff = _now - dt
+    seconds = diff.total_seconds()
+    if as_seconds or context is None:
         return seconds
 
     yesterday = _now - timedelta(days=1)
@@ -210,16 +252,22 @@ def datetime_to_since(context, dt, local=True, as_seconds=False):
         if 10800 <= seconds < 14400:
             return context.localize('datetime.three_hours_ago')
         if use_yesterday and dt.date() == yesterday.date():
-            return ' '.join((context.localize('datetime.yesterday_at'),
-                             context.format_time(dt)))
+            return ' '.join((
+                context.localize('datetime.yesterday_at'),
+                format_time(dt)),
+            )
         if dt.date() == yyesterday.date():
             return context.localize('datetime.two_days_ago')
         if 5400 <= seconds < 86400:
-            return ' '.join((context.localize('datetime.today_at'),
-                             context.format_time(dt)))
+            return ' '.join((
+                context.localize('datetime.today_at'),
+                format_time(dt)),
+            )
         if 86400 <= seconds < 172800:
-            return ' '.join((context.localize('datetime.yesterday_at'),
-                             context.format_time(dt)))
+            return ' '.join((
+                context.localize('datetime.yesterday_at'),
+                format_time(dt)),
+            )
     else:
         seconds *= -1
         if seconds < 60:
@@ -233,13 +281,20 @@ def datetime_to_since(context, dt, local=True, as_seconds=False):
         if 7200 <= seconds < 10800:
             return context.localize('datetime.in_over_two_hours')
         if dt.date() == today:
-            return ' '.join((context.localize('datetime.airing_today_at'),
-                             context.format_time(dt)))
+            return ' '.join((
+                context.localize('datetime.airing_today_at'),
+                format_time(dt)),
+            )
         if dt.date() == tomorrow:
-            return ' '.join((context.localize('datetime.tomorrow_at'),
-                             context.format_time(dt)))
+            return ' '.join((
+                context.localize('datetime.tomorrow_at'),
+                format_time(dt)),
+            )
 
-    return ' '.join((context.format_date_short(dt), context.format_time(dt)))
+    return ' '.join((
+        format_date_short(dt),
+        format_time(dt)),
+    )
 
 
 # Python strptime bug workaround
@@ -354,3 +409,68 @@ def imf_fixdate(seconds,
     _time = gmtime(seconds)
     out = strftime('{weekday}, %d {month} %Y %H:%M:%S GMT', _time)
     return out.format(weekday=_days[_time.tm_wday], month=_months[_time.tm_mon])
+
+
+def format_time(time_obj, str_format=None):
+    if str_format is None:
+        str_format = (xbmc.getRegion('time')
+                      .replace('%H%H', '%H')
+                      .replace(':%S', ''))
+    return time_obj.strftime(str_format)
+
+
+def format_date_short(date_obj, str_format=None):
+    if str_format is None:
+        str_format = xbmc.getRegion('dateshort')
+    return date_obj.strftime(str_format)
+
+
+def duration_to_seconds(duration,
+                        periods_seconds_map={
+                            '': 1,       # 1 second for unitless period
+                            's': 1,      # 1 second
+                            'm': 60,     # 1 minute
+                            'h': 3600,   # 1 hour
+                            'd': 86400,  # 1 day
+                        },
+                        periods_re=re_compile(r'([\d.]+)(d|h|m|s|$)')):
+    if ':' in duration:
+        seconds = 0
+        for part in duration.split(':'):
+            seconds = seconds * 60 + (float(part) if '.' in part else int(part))
+        return seconds
+    return sum(
+        (float(number) if '.' in number else int(number))
+        * periods_seconds_map.get(period, 1)
+        for number, period in periods_re.findall(duration.lower())
+    )
+
+
+def seconds_to_duration(seconds):
+    return str(timedelta(seconds=seconds))
+
+
+def timedelta_to_timestamp(delta, offset=None, multiplier=1.0):
+    if isinstance(delta, timedelta):
+        pass
+    elif isinstance(delta, (list, tuple)) and len(delta) == 3:
+        delta = timedelta(hours=int(delta[0]),
+                          minutes=int(delta[1]),
+                          seconds=float(delta[2]))
+    else:
+        return None
+
+    if offset is not None:
+        if isinstance(offset, timedelta):
+            delta += offset
+        elif isinstance(offset, (list, tuple)) and len(offset) == 3:
+            delta += timedelta(hours=int(offset[0]),
+                               minutes=int(offset[1]),
+                               seconds=float(offset[2]))
+        elif isinstance(offset, dict):
+            delta += timedelta(**offset)
+
+    total_seconds = delta.total_seconds() * multiplier
+    hrs, rem = divmod(total_seconds, 3600)
+    mins, secs = divmod(rem, 60)
+    return '{0:02.0f}:{1:02.0f}:{2:06.3f}'.format(hrs, mins, secs)

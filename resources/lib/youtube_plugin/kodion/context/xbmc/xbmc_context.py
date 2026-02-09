@@ -534,20 +534,6 @@ class XbmcContext(AbstractContext):
         return uri.startswith(uri_path)
 
     @staticmethod
-    def format_date_short(date_obj, str_format=None):
-        if str_format is None:
-            str_format = xbmc.getRegion('dateshort')
-        return date_obj.strftime(str_format)
-
-    @staticmethod
-    def format_time(time_obj, str_format=None):
-        if str_format is None:
-            str_format = (xbmc.getRegion('time')
-                          .replace('%H%H', '%H')
-                          .replace(':%S', ''))
-        return time_obj.strftime(str_format)
-
-    @staticmethod
     def get_language(region=True, separator='-', code_format=xbmc.ISO_639_1):
         _code_format = xbmc.ISO_639_1
         _language = xbmc.getLanguage(format=_code_format, region=region)
