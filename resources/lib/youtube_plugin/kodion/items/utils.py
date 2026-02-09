@@ -11,7 +11,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
-from datetime import date, datetime
 
 from .bookmark_item import BookmarkItem
 from .directory_item import DirectoryItem
@@ -19,7 +18,7 @@ from .image_item import ImageItem
 from .media_item import AudioItem, VideoItem
 from .. import logging
 from ..compatibility import string_type, to_str
-from ..utils.datetime import strptime
+from ..utils.datetime import date, datetime, strptime
 
 
 _ITEM_TYPES = {
