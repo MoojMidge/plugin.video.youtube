@@ -108,6 +108,7 @@ CONTEXT_MENU = 'cxm_action'
 FILE_READ = 'file_read'
 FILE_WRITE = 'file_write'
 KEYMAP = 'key_action'
+LOAD_STREAM_INFO = 'load_stream_info'
 PLAYBACK_INIT = 'playback_init'
 PLAYBACK_FAILED = 'playback_failed'
 PLAYBACK_STARTED = 'playback_started'
@@ -276,6 +277,7 @@ __all__ = (
     'FILE_READ',
     'FILE_WRITE',
     'KEYMAP',
+    'LOAD_STREAM_INFO',
     'PLAYBACK_INIT',
     'PLAYBACK_FAILED',
     'PLAYBACK_STARTED',

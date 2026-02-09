@@ -45,10 +45,15 @@ def run():
     context = XbmcContext()
     provider = Provider()
 
-    monitor = ServiceMonitor(context=context)
-    player = PlayerMonitor(provider=provider,
-                           context=context,
-                           monitor=monitor)
+    monitor = ServiceMonitor(
+        provider=provider,
+        context=context,
+    )
+    player = PlayerMonitor(
+        provider=provider,
+        context=context,
+        monitor=monitor,
+    )
 
     system_version = context.get_system_version()
     logging.info(('Starting v{version}',
