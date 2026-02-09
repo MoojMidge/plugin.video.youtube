@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import json
 from io import open
 from threading import Event, Lock, Thread
+from xml.etree.ElementTree import XMLParser as ET_XMLParser
 
 from .. import logging
 from ..compatibility import urlsplit, xbmc
@@ -24,6 +25,7 @@ from ..constants import (
     CONTAINER_POSITION,
     FILE_READ,
     FILE_WRITE,
+    LOAD_STREAM_INFO,
     MARK_AS_LABEL,
     PATHS,
     PLAYBACK_STOPPED,
@@ -42,6 +44,7 @@ from ..constants import (
     VIDEO_ID,
 )
 from ..network import get_connect_address, get_http_server, httpd_status
+from ..utils.datetime import datetime_elapsed
 from ..utils.methods import jsonrpc
 
 
@@ -52,7 +55,8 @@ class ServiceMonitor(xbmc.Monitor):
     _settings_collect = False
     get_idle_time = xbmc.getGlobalIdleTime
 
-    def __init__(self, context):
+    def __init__(self, provider, context):
+        self._provider = provider
         self._context = context
 
         self._api_values = ('', '', '')
@@ -74,6 +78,12 @@ class ServiceMonitor(xbmc.Monitor):
         self.interrupt = False
 
         self.file_access = {}
+
+        self.mpd_data = {
+            '__video_id': None,
+            '__expire': None,
+            '__repr_data': {},
+        }
 
         self.onSettingsChanged(force=True)
 
@@ -201,6 +211,58 @@ class ServiceMonitor(xbmc.Monitor):
                 elif state == 'ignore':
                     self._settings_collect = -1
                 response = True
+
+            elif target == LOAD_STREAM_INFO:
+                provider = self._provider
+                context = self._context
+
+                video_id = data.get(VIDEO_ID)
+                mpd_data = self.mpd_data
+                mpd_video_id = mpd_data['__video_id']
+                mpd_expire = mpd_data['__expire']
+                if (mpd_video_id is None
+                        or mpd_video_id != video_id
+                        or not mpd_expire
+                        or datetime_elapsed(mpd_expire, data.get('from_end'))):
+                    player_data = provider.on_play_x(
+                        provider,
+                        context,
+                        video_id=video_id,
+                        reload=True,
+                    )
+
+                    parser = ET_XMLParser(encoding='utf-8')
+                    try:
+                        with open(data.get('file_path'), mode='rb') as mpd_file:
+                            while 1:
+                                file_chunk = mpd_file.read()
+                                if not file_chunk:
+                                    break
+                                parser.feed(file_chunk)
+                    except (IOError, OSError):
+                        repr_data = {}
+                    else:
+                        ns = {
+                            'mpd': 'urn:mpeg:dash:schema:mpd:2011',
+                        }
+                        repr_data = {
+                            rep.get('id'): rep.findtext(
+                                './mpd:BaseURL',
+                                namespaces=ns,
+                            )
+                            for rep in parser.close().iterfind(
+                                './/mpd:Representation',
+                                namespaces=ns,
+                            )
+                        }
+
+                    response = self.mpd_data = {
+                        '__video_id': player_data[VIDEO_ID],
+                        '__expire': player_data['status']['expire'],
+                        '__repr_data': repr_data,
+                    }
+                else:
+                    response = mpd_data
 
             elif target in {FILE_READ, FILE_WRITE}:
                 response = None

@@ -38,11 +38,14 @@ from ..compatibility import (
 from ..constants import (
     LICENSE_TOKEN,
     LICENSE_URL,
+    LOAD_STREAM_INFO,
     PATHS,
     SYNC_API_KEYS,
     TEMP_PATH,
+    VIDEO_ID,
 )
 from ..utils.convert_format import fix_subtitle_stream
+from ..utils.datetime import datetime_elapsed
 from ..utils.methods import wait
 from ..utils.redact import parse_and_redact_uri
 
@@ -117,9 +120,14 @@ class RequestHandler(BaseHTTPRequestHandler, object):
     BASE_PATH = xbmcvfs.translatePath(TEMP_PATH)
     chunk_size = 1024 * 64
 
-    server_priority_list = {
+    stream_proxy_data = {
         'stream_ids': deque(),
         'server_lists': {},
+        'mpd_data': {
+            '__video_id': None,
+            '__expire': None,
+            '__repr_data': {},
+        },
     }
 
     SWALLOWED_ERRORS = {
@@ -356,16 +364,59 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             stream_id = params.pop('__id', empty)
             method = params.pop('__method', empty)[0] or 'POST'
             if original_path == '/videoplayback':
-                stream_id += params.get('itag', empty)
+                video_id = stream_id[0]
+                itag = params.get('itag', empty)
+                stream_id += itag
                 stream_id = tuple(stream_id)
+                itag = itag[0]
                 stream_type = params.get('mime', empty)[0]
                 if stream_type:
                     stream_type = tuple(stream_type.split('/'))
                 else:
                     stream_type = (None, None)
-                ids = self.server_priority_list['stream_ids']
-                server_lists = self.server_priority_list['server_lists']
-                if stream_id in ids:
+
+                proxy_data = self.stream_proxy_data
+                stream_ids = proxy_data['stream_ids']
+                server_lists = proxy_data['server_lists']
+
+                expire = params.get('expire', empty)[0]
+                from_end = -300
+                if expire and datetime_elapsed(expire, from_end):
+                    mpd_data = proxy_data['mpd_data']
+                    mpd_video_id = mpd_data['__video_id']
+                    mpd_expire = mpd_data['__expire']
+                    if (mpd_video_id is None
+                            or mpd_video_id != video_id
+                            or not mpd_expire
+                            or datetime_elapsed(mpd_expire, from_end)):
+                        _, timeout = settings.requests_timeout()
+                        file_name = '.'.join((video_id, 'mpd'))
+                        file_path = os.path.join(self.BASE_PATH, file_name)
+                        mpd_data = proxy_data['mpd_data'] = context.ipc_exec(
+                            LOAD_STREAM_INFO,
+                            timeout=timeout,
+                            payload={
+                                VIDEO_ID: video_id,
+                                'file_path': file_path,
+                                'from_end': from_end,
+                            },
+                        )
+
+                    if stream_id in stream_ids:
+                        stream_ids.remove(stream_id)
+                    new_uri = mpd_data['__repr_data'].get(itag)
+                    if new_uri:
+                        self.send_response(301)
+                        self.send_header('Location', new_uri)
+                        self.end_headers()
+                    else:
+                        self.send_error(
+                            code=404,
+                            message='Itag not available',
+                        )
+                    return
+
+                if stream_id in stream_ids:
                     priority_list = server_lists[stream_id]['list']
                     if priority_list:
                         request_servers.sort(
@@ -375,21 +426,23 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                             reverse=True,
                         )
                 else:
-                    ids.append(stream_id)
-                    if len(ids) > 5:
-                        old_id = ids.popleft()
+                    stream_ids.append(stream_id)
+                    if len(stream_ids) > 5:
+                        old_id = stream_ids.popleft()
                         del server_lists[old_id]
                     priority_list = []
                     server_lists[stream_id] = {
                         'started': False,
                         'list': priority_list,
                     }
+
             elif original_path == '/api/timedtext':
                 stream_id = tuple(stream_id)
                 stream_type = (params.get('type', ['track'])[0],
                                params.get('fmt', empty)[0],
                                params.get('kind', empty)[0])
                 priority_list = []
+
             else:
                 stream_id = tuple(stream_id)
                 stream_type = (None, None)
