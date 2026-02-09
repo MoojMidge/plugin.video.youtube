@@ -11,7 +11,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import time
-from datetime import date as dt_date, datetime as dt_datetime
 from math import log10
 from operator import (
     contains as op_contains,
@@ -49,6 +48,8 @@ from ...kodion.utils.convert_format import (
     strip_html_from_text,
 )
 from ...kodion.utils.datetime import (
+    date_types,
+    format_date_short,
     get_scheduled_start,
     parse_to_dt,
     utc_to_local,
@@ -144,9 +145,10 @@ def make_comment_item(context, snippet, uri, reply_count=0):
             uri,
             image=author_image,
             plot=plot,
-            category_label=' - '.join(
-                (author, context.format_date_short(local_datetime))
-            ),
+            category_label=' - '.join((
+                author,
+                format_date_short(local_datetime),
+            )),
             special_sort=False,
         )
     else:
@@ -895,7 +897,7 @@ def update_video_items(provider, context, video_id_dict,
                 type_label = localize('start')
             start_at = ' '.join((
                 type_label,
-                get_scheduled_start(context, local_datetime),
+                get_scheduled_start(local_datetime),
             ))
 
         label_stats = []
@@ -1498,7 +1500,7 @@ def filter_parse(item,
                     input_2 = unquote(input_2[1:-1])
                     if input_1 is None:
                         input_1 = ''
-                    elif isinstance(input_1, (dt_date, dt_datetime)):
+                    elif isinstance(input_1, date_types):
                         input_2 = parse_to_dt(input_2)
                 else:
                     input_2 = float(input_2)

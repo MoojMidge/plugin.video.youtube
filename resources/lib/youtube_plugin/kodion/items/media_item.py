@@ -10,13 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from datetime import date
 from re import compile as re_compile
 
 from . import BaseItem
 from ..compatibility import datetime_infolabel, to_str, unescape, urlencode
 from ..constants import CHANNEL_ID, CONTENT, PLAYLIST_ID, VIDEO_ID
-from ..utils.convert_format import duration_to_seconds, seconds_to_duration
+from ..utils.datetime import date, duration_to_seconds, seconds_to_duration
 
 
 class MediaItem(BaseItem):

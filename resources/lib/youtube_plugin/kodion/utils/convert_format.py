@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from datetime import timedelta
 from math import floor, log
 from re import DOTALL, compile as re_compile
 
@@ -59,57 +58,6 @@ def friendly_number(value, precision=3, scale=('', 'K', 'M', 'B'), as_str=True):
         output=value / 1000 ** magnitude
     ).rstrip('0').rstrip('.') + scale[magnitude]
     return output if as_str else (output, value)
-
-
-def duration_to_seconds(duration,
-                        periods_seconds_map={
-                            '': 1,       # 1 second for unitless period
-                            's': 1,      # 1 second
-                            'm': 60,     # 1 minute
-                            'h': 3600,   # 1 hour
-                            'd': 86400,  # 1 day
-                        },
-                        periods_re=re_compile(r'([\d.]+)(d|h|m|s|$)')):
-    if ':' in duration:
-        seconds = 0
-        for part in duration.split(':'):
-            seconds = seconds * 60 + (float(part) if '.' in part else int(part))
-        return seconds
-    return sum(
-        (float(number) if '.' in number else int(number))
-        * periods_seconds_map.get(period, 1)
-        for number, period in periods_re.findall(duration.lower())
-    )
-
-
-def seconds_to_duration(seconds):
-    return str(timedelta(seconds=seconds))
-
-
-def timedelta_to_timestamp(delta, offset=None, multiplier=1.0):
-    if isinstance(delta, timedelta):
-        pass
-    elif isinstance(delta, (list, tuple)) and len(delta) == 3:
-        delta = timedelta(hours=int(delta[0]),
-                          minutes=int(delta[1]),
-                          seconds=float(delta[2]))
-    else:
-        return None
-
-    if offset is not None:
-        if isinstance(offset, timedelta):
-            delta += offset
-        elif isinstance(offset, (list, tuple)) and len(offset) == 3:
-            delta += timedelta(hours=int(offset[0]),
-                               minutes=int(offset[1]),
-                               seconds=float(offset[2]))
-        elif isinstance(offset, dict):
-            delta += timedelta(**offset)
-
-    total_seconds = delta.total_seconds() * multiplier
-    hrs, rem = divmod(total_seconds, 3600)
-    mins, secs = divmod(rem, 60)
-    return '{0:02.0f}:{1:02.0f}:{2:06.3f}'.format(hrs, mins, secs)
 
 
 def _srt_to_vtt(content,

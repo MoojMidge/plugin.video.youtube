@@ -46,7 +46,7 @@ from ...kodion.constants import (
 )
 from ...kodion.items import AudioItem, UriItem, VideoItem
 from ...kodion.network import get_connect_address
-from ...kodion.utils.datetime import datetime_to_since
+from ...kodion.utils.datetime import datetime_elapsed
 from ...kodion.utils.redact import redact_params
 
 
@@ -483,15 +483,11 @@ def process_items_for_playlist(context,
     # add videos to playlist
     num_items = 0
     # convert from days to seconds
-    recent_limit = recent_days * 24 * 60 * 60 if recent_days else None
+    elapsed = recent_days * 24 * 60 * 60 if recent_days else None
     for idx, item in enumerate(items):
         if not item.playable:
             continue
-        if (recent_limit and datetime_to_since(
-                context,
-                item.get_dateadded(),
-                as_seconds=True,
-        ) > recent_limit):
+        if elapsed and datetime_elapsed(item.get_dateadded(), elapsed):
             continue
         playlist_player.add(item)
         num_items += 1

@@ -35,7 +35,7 @@ from ...kodion.constants import (
     YOUTUBE_HOSTNAMES,
 )
 from ...kodion.items import DirectoryItem, UriItem, VideoItem
-from ...kodion.utils.convert_format import duration_to_seconds
+from ...kodion.utils.datetime import duration_to_seconds
 
 
 class UrlToItemConverter(object):
