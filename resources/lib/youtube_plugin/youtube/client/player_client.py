@@ -36,7 +36,7 @@ from ...kodion.compatibility import (
 )
 from ...kodion.constants import INCOGNITO, PATHS, TEMP_PATH, VALUE_TO_STR
 from ...kodion.network import get_connect_address
-from ...kodion.utils.datetime import fromtimestamp
+from ...kodion.utils.datetime import fromtimestamp, since_epoch
 from ...kodion.utils.file_system import make_dirs
 from ...kodion.utils.methods import merge_dicts
 
@@ -1709,8 +1709,16 @@ class YouTubePlayerClient(YouTubeDataClient):
 
         if _result:
             video_details = _result.get('videoDetails', {})
+            _streaming_data = _result.get('streamingData', {})
         else:
             video_details = {}
+            _streaming_data = None
+
+        expire = int(since_epoch())
+        if _streaming_data:
+            expire += int(_streaming_data.get('expiresInSeconds', '21540'))
+        else:
+            expire += 21540
 
         if _yt_cfg:
             signature_timestamp = _yt_cfg.get('STS')
@@ -1735,7 +1743,6 @@ class YouTubePlayerClient(YouTubeDataClient):
         _has_auth = None
         _video_details = None
         _microformat = None
-        _streaming_data = None
         _playability = None
         _status = None
         _reason = None
@@ -2054,6 +2061,7 @@ class YouTubePlayerClient(YouTubeDataClient):
                 'post_live': post_live,
                 'was_live': was_live,
                 'upcoming': video_details.get('isUpcoming', False),
+                'expire': expire,
             },
             'channel': {
                 'id': video_details.get('channelId', ''),
