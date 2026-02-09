@@ -11,7 +11,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
-from datetime import date, datetime
 
 from .menu_items import separator
 from ..compatibility import (
@@ -21,6 +20,7 @@ from ..compatibility import (
     unescape,
 )
 from ..constants import MEDIA_PATH
+from ..utils.datetime import datetime, date_types
 from ..utils.methods import generate_hash
 
 
@@ -346,7 +346,7 @@ class BaseItem(object):
 
 class _Encoder(json.JSONEncoder):
     def encode(self, obj, nested=False):
-        if isinstance(obj, (date, datetime)):
+        if isinstance(obj, date_types):
             class_name = obj.__class__.__name__
             try:
                 if obj.fromisoformat:

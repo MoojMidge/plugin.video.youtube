@@ -220,14 +220,6 @@ class AbstractContext(object):
         self.set_path(path, force=True)
 
     @staticmethod
-    def format_date_short(date_obj, str_format=None):
-        raise NotImplementedError()
-
-    @staticmethod
-    def format_time(time_obj, str_format=None):
-        raise NotImplementedError()
-
-    @staticmethod
     def get_language():
         raise NotImplementedError()
 
