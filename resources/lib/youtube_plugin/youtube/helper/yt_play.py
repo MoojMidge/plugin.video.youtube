@@ -166,7 +166,7 @@ def _play_stream(provider, context):
     playback_data = {
         VIDEO_ID: video_id,
         CHANNEL_ID: metadata.get('channel', {}).get('id', ''),
-        'video_status': metadata.get('status', {}),
+        'status': metadata.get('status', {}),
         'playing_file': media_item.get_uri(),
         'play_count': play_count,
         'use_remote_history': use_remote_history,
