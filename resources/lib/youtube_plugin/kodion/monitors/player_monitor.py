@@ -36,7 +36,7 @@ class PlayerMonitorThread(object):
         video_id = player_data.get(VIDEO_ID)
         self.video_id = video_id
         self.channel_id = player_data.get(CHANNEL_ID)
-        self.video_status = player_data.get('video_status')
+        self.status = player_data.get('status')
 
         self._stopped = threading.Event()
         self._ended = threading.Event()
@@ -102,7 +102,7 @@ class PlayerMonitorThread(object):
             context.send_notification(PLAYBACK_STARTED, {
                 VIDEO_ID: video_id,
                 CHANNEL_ID: self.channel_id,
-                'status': self.video_status,
+                'status': self.status,
             })
 
         client = provider.get_client(context)
@@ -215,7 +215,7 @@ class PlayerMonitorThread(object):
             client = provider.get_client(context)
             logged_in = client.logged_in
 
-        if self.video_status.get('live'):
+        if self.status.get('live'):
             play_count += 1
             segment_end = self.current_time
             play_data = {
