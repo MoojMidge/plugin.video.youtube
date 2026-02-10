@@ -13,6 +13,7 @@ import socket
 from atexit import register as atexit_register
 from collections import OrderedDict
 from os.path import exists, isdir
+from sys import platform as sys_platform
 
 from requests.adapters import HTTPAdapter as _HTTPAdapter, Retry
 from requests.exceptions import InvalidJSONError, RequestException, URLRequired
@@ -25,6 +26,10 @@ from requests.utils import (
     default_headers,
     extract_zipped_paths,
 )
+from urllib3.connectionpool import (
+    HTTPConnectionPool as _HTTPConnectionPool,
+    HTTPSConnectionPool as _HTTPSConnectionPool,
+)
 from urllib3.util.ssl_ import create_urllib3_context
 
 from .. import logging
@@ -34,12 +39,121 @@ from ..utils.methods import generate_hash
 
 __all__ = (
     'BaseRequestsClass',
-    'InvalidJSONError'
+    'InvalidJSONError',
+    'apply_socket_options',
 )
+
+_TCP_KEEPIDLE = 300
+_TCP_KEEPINTVL = 60
+_TCP_KEEPCNT = 5
+_TCP_USER_TIMEOUT = _TCP_KEEPIDLE + _TCP_KEEPINTVL * _TCP_KEEPCNT
+_SOCKET_OPTIONS = {
+    'setsockopt': [
+        option for option in (
+            (
+                socket.SOL_SOCKET,
+                getattr(socket, 'SO_KEEPALIVE', None),
+                1,
+            ),
+            (
+                socket.IPPROTO_TCP,
+                getattr(socket, 'TCP_NODELAY', None),
+                1,
+            ),
+            (
+                socket.IPPROTO_TCP,
+                getattr(socket, 'TCP_KEEPIDLE', None),
+                _TCP_KEEPIDLE,
+            ),
+            # TCP_KEEPALIVE equivalent to TCP_KEEPIDLE on iOS/macOS
+            (
+                socket.IPPROTO_TCP,
+                getattr(socket, 'TCP_KEEPALIVE', None),
+                _TCP_KEEPIDLE,
+            ),
+            # TCP_KEEPINTVL may not be implemented at app level on iOS/macOS
+            (
+                socket.IPPROTO_TCP,
+                getattr(socket, 'TCP_KEEPINTVL', None),
+                _TCP_KEEPINTVL,
+            ),
+            # TCP_KEEPCNT may not be implemented at app level on iOS/macOS
+            (
+                socket.IPPROTO_TCP,
+                getattr(socket, 'TCP_KEEPCNT', None),
+                _TCP_KEEPCNT,
+            ),
+            (
+                socket.IPPROTO_TCP,
+                getattr(socket, 'TCP_USER_TIMEOUT', None),
+                _TCP_USER_TIMEOUT,
+            ),
+        )
+        if option[1] is not None
+    ],
+    'ioctl': [
+        option for option in (
+            (
+                getattr(socket, 'SIO_KEEPALIVE_VALS', None),
+                (
+                    1,
+                    _TCP_KEEPIDLE * 1000,
+                    _TCP_KEEPINTVL * 1000,
+                ),
+            ),
+        )
+        if option[0] is not None
+    ],
+}
+
+
+def apply_socket_options(sock, method='setsockopt'):
+    if not sock:
+        return
+
+    options = _SOCKET_OPTIONS.get(method)
+    if options:
+        method = getattr(sock, method, None)
+        if method:
+            for option in options:
+                method(*option)
+
+
+if sys_platform == 'win32':
+    class HTTPConnectionPool(_HTTPConnectionPool):
+        def _validate_conn(self, conn):
+            sock = getattr(conn, 'sock', None)
+            if sock:
+                apply_socket_options(sock, method='ioctl')
+            return super(HTTPConnectionPool, self)._validate_conn(conn)
+
+
+    class HTTPSConnectionPool(_HTTPSConnectionPool):
+        def _validate_conn(self, conn):
+            sock = getattr(conn, 'sock', None)
+            if sock:
+                apply_socket_options(sock, method='ioctl')
+            return super(HTTPSConnectionPool, self)._validate_conn(conn)
+
+
+    _pool_classes_by_scheme = {
+        'http': HTTPConnectionPool,
+        'https': HTTPSConnectionPool,
+    }
+else:
+    _pool_classes_by_scheme = {
+        'http': _HTTPConnectionPool,
+        'https': _HTTPSConnectionPool,
+    }
 
 
 class HTTPAdapter(_HTTPAdapter):
     MAX_TOTAL_RETRIES = 3
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs['socket_options'] = _SOCKET_OPTIONS['setsockopt']
+        super(HTTPAdapter, self).init_poolmanager(*args, **kwargs)
+        self.poolmanager.pool_classes_by_scheme = _pool_classes_by_scheme
 
     def send(self, *args, **kwargs):
         retry = self.max_retries
@@ -62,22 +176,7 @@ class HTTPAdapter(_HTTPAdapter):
                 retry.other = 0
         return super(HTTPAdapter, self).send(*args, **kwargs)
 
-
 class SSLHTTPAdapter(HTTPAdapter):
-    _SOCKET_OPTIONS = (
-        (socket.SOL_SOCKET, getattr(socket, 'SO_KEEPALIVE', None), 1),
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_NODELAY', None), 1),
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPIDLE', None), 300),
-        # TCP_KEEPALIVE equivalent to TCP_KEEPIDLE on iOS/macOS
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPALIVE', None), 300),
-        # TCP_KEEPINTVL may not be implemented at app level on iOS/macOS
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPINTVL', None), 60),
-        # TCP_KEEPCNT may not be implemented at app level on iOS/macOS
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPCNT', None), 5),
-        # TCP_USER_TIMEOUT = TCP_KEEPIDLE + TCP_KEEPINTVL * TCP_KEEPCNT
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_USER_TIMEOUT', None), 600),
-    )
-
     _SSL_CONTEXT = create_urllib3_context()
     _CA_PATH = extract_zipped_paths(DEFAULT_CA_BUNDLE_PATH)
     if not _CA_PATH or not exists(_CA_PATH):
@@ -90,12 +189,6 @@ class SSLHTTPAdapter(HTTPAdapter):
 
     def init_poolmanager(self, *args, **kwargs):
         kwargs['ssl_context'] = self._SSL_CONTEXT
-
-        kwargs['socket_options'] = [
-            socket_option for socket_option in self._SOCKET_OPTIONS
-            if socket_option[1] is not None
-        ]
-
         return super(SSLHTTPAdapter, self).init_poolmanager(*args, **kwargs)
 
     def cert_verify(self, conn, url, verify, cert):

@@ -22,7 +22,7 @@ from textwrap import dedent
 
 from urllib3.exceptions import HTTPError
 
-from .requests import BaseRequestsClass
+from .requests import BaseRequestsClass, apply_socket_options
 from .. import logging
 from ..compatibility import (
     BaseHTTPRequestHandler,
@@ -64,6 +64,7 @@ class HTTPServer(ThreadingMixIn, TCPServer):
 
     def finish_request(self, request, client_address):
         handler = self.RequestHandlerClass(request, client_address, self)
+        apply_socket_options(handler.connection)
         HTTPServer._handlers.append(handler)
 
         try:
@@ -182,6 +183,7 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             return
 
         try:
+            self.close_connection = False
             super(RequestHandler, self).handle_one_request()
             return
         except Exception as exc:
@@ -284,6 +286,7 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Content-Length', str(len(client_json)))
+            self.send_header('Connection', 'close')
             self.end_headers()
             self.wfile.write(client_json.encode('utf-8'))
 
@@ -311,6 +314,7 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                         self.send_response(200)
                         self.send_header('Content-Type', 'application/dash+xml')
                         self.send_header('Content-Length', str(file_size))
+                        self.send_header('Connection', 'close')
                         self.end_headers()
                         while 1:
                             file_chunk = file_stream.read()
@@ -408,6 +412,7 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                     if new_uri:
                         self.send_response(301)
                         self.send_header('Location', new_uri)
+                        self.send_header('Connection', 'keep-alive')
                         self.end_headers()
                     else:
                         self.send_error(
@@ -697,6 +702,7 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/dash+xml')
                     self.send_header('Content-Length', str(file_size))
+                    self.send_header('Connection', 'keep-alive')
                     self.end_headers()
                 except IOError:
                     context.sleep(timeout_step)
