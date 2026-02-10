@@ -34,8 +34,33 @@ from ..utils.methods import generate_hash
 
 __all__ = (
     'BaseRequestsClass',
-    'InvalidJSONError'
+    'InvalidJSONError',
+    'apply_socket_options',
 )
+
+_SOCKET_OPTIONS = (
+    (socket.SOL_SOCKET, getattr(socket, 'SO_KEEPALIVE', None), 1),
+    (socket.IPPROTO_TCP, getattr(socket, 'TCP_NODELAY', None), 1),
+    (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPIDLE', None), 300),
+    # TCP_KEEPALIVE equivalent to TCP_KEEPIDLE on iOS/macOS
+    (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPALIVE', None), 300),
+    # TCP_KEEPINTVL may not be implemented at app level on iOS/macOS
+    (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPINTVL', None), 60),
+    # TCP_KEEPCNT may not be implemented at app level on iOS/macOS
+    (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPCNT', None), 5),
+    # TCP_USER_TIMEOUT = TCP_KEEPIDLE + TCP_KEEPINTVL * TCP_KEEPCNT
+    (socket.IPPROTO_TCP, getattr(socket, 'TCP_USER_TIMEOUT', None), 600),
+)
+
+
+def apply_socket_options(sock, options=_SOCKET_OPTIONS):
+    setsockopt = sock and getattr(sock, 'setsockopt', None)
+    if not setsockopt:
+        return
+    for option in options:
+        if not option or option[1] is None:
+            continue
+        setsockopt(*option)
 
 
 class HTTPAdapter(_HTTPAdapter):
@@ -62,22 +87,7 @@ class HTTPAdapter(_HTTPAdapter):
                 retry.other = 0
         return super(HTTPAdapter, self).send(*args, **kwargs)
 
-
 class SSLHTTPAdapter(HTTPAdapter):
-    _SOCKET_OPTIONS = (
-        (socket.SOL_SOCKET, getattr(socket, 'SO_KEEPALIVE', None), 1),
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_NODELAY', None), 1),
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPIDLE', None), 300),
-        # TCP_KEEPALIVE equivalent to TCP_KEEPIDLE on iOS/macOS
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPALIVE', None), 300),
-        # TCP_KEEPINTVL may not be implemented at app level on iOS/macOS
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPINTVL', None), 60),
-        # TCP_KEEPCNT may not be implemented at app level on iOS/macOS
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_KEEPCNT', None), 5),
-        # TCP_USER_TIMEOUT = TCP_KEEPIDLE + TCP_KEEPINTVL * TCP_KEEPCNT
-        (socket.IPPROTO_TCP, getattr(socket, 'TCP_USER_TIMEOUT', None), 600),
-    )
-
     _SSL_CONTEXT = create_urllib3_context()
     _CA_PATH = extract_zipped_paths(DEFAULT_CA_BUNDLE_PATH)
     if not _CA_PATH or not exists(_CA_PATH):
@@ -92,7 +102,7 @@ class SSLHTTPAdapter(HTTPAdapter):
         kwargs['ssl_context'] = self._SSL_CONTEXT
 
         kwargs['socket_options'] = [
-            socket_option for socket_option in self._SOCKET_OPTIONS
+            socket_option for socket_option in _SOCKET_OPTIONS
             if socket_option[1] is not None
         ]
 
