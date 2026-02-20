@@ -371,15 +371,13 @@ class XbmcPlugin(AbstractPlugin):
                         PLAYBACK_FAILED,
                         {VIDEO_ID: context.get_param(VIDEO_ID)},
                     )
-                    # None of the following will actually prevent the
-                    # playback attempt from occurring
-                    item = xbmcgui.ListItem(path=uri, offscreen=True)
+                    # May not prevent the playback attempt from occurring and
+                    # subsequently failing
+                    item = xbmcgui.ListItem()
                     item.setContentLookup(False)
-                    props = {
+                    item.setProperties({
                         'isPlayable': 'false',
-                        'ForceResolvePlugin': 'true',
-                    }
-                    item.setProperties(props)
+                    })
                     xbmcplugin.setResolvedUrl(
                         handle,
                         succeeded=False,
