@@ -1536,13 +1536,14 @@ class YouTubePlayerClient(YouTubeDataClient):
 
             if 'mn' in params and 'fvip' in params:
                 fvip = params['fvip'][0]
-                primary, _, secondary = params['mn'][0].partition(',')
-                prefix, separator, server = parts.hostname.partition('---')
-                if primary and secondary:
-                    new_params['__host'].append(separator.join((
-                        digits_re.sub(fvip, prefix),
-                        server.replace(primary, secondary),
-                    )))
+                original, _, fallbacks = params['mn'][0].partition(',')
+                if original and fallbacks:
+                    prefix, separator, server = parts.hostname.partition('---')
+                    for fallback in fallbacks.split(','):
+                        new_params['__host'].append(separator.join((
+                            digits_re.sub(fvip, prefix),
+                            server.replace(original, fallback),
+                        )))
 
             if cpn is not False:
                 new_params['cpn'] = cpn or self._generate_cpn()
