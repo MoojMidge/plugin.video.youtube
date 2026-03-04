@@ -1196,7 +1196,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             if itag in stream_list:
                 break
 
-            headers = response['client']['headers']
+            headers = response['client']['headers'].copy()
             url = self._process_url_params(
                 response['mpd_manifest'],
                 mpd_manifest=True,
@@ -1252,7 +1252,7 @@ class YouTubePlayerClient(YouTubeDataClient):
 
         for client_name, response in responses.items():
             client = response['client']
-            headers = client['headers']
+            headers = client['headers'].copy()
             url = self._process_url_params(
                 response['hls_manifest'],
                 headers=headers,
@@ -1358,7 +1358,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             if not streams:
                 continue
 
-            headers = response['client']['headers']
+            headers = response['client']['headers'].copy()
 
             for stream_map in streams:
                 itag = str(stream_map['itag'])
