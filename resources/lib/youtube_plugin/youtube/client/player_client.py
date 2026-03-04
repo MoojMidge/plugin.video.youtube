@@ -1966,13 +1966,13 @@ class YouTubePlayerClient(YouTubeDataClient):
                 video_details = merge_dicts(
                     _video_details,
                     video_details,
-                    compare_str=True,
+                    str_compare=True,
                 )
 
                 microformat = merge_dicts(
                     _microformat,
                     microformat,
-                    compare_str=True,
+                    str_compare=True,
                 )
 
                 if not auth_client and _has_auth:
@@ -1999,7 +1999,7 @@ class YouTubePlayerClient(YouTubeDataClient):
                 video_details = merge_dicts(
                     _video_details,
                     video_details,
-                    compare_str=True,
+                    str_compare=True,
                 )
 
         if not responses:
