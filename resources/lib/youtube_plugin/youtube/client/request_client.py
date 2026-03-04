@@ -75,8 +75,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_name]} {_id[os_version]}'
                     ') gzip'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'android_vr': {
@@ -118,8 +116,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' Build/{_id[os_build]}'
                     ') gzip'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         # Disabled - requires login but fails using OAuth2 authorisation
@@ -162,8 +158,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_name]} {_id[os_version]}'
                     ') gzip'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'android_testsuite_params': {
@@ -201,8 +195,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_name]} {_id[os_version]}'
                     ') gzip'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         # Disabled - all player requests result in following response
@@ -245,8 +237,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_name]} {_id[os_version]}'
                     ') gzip'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         # Disabled - requires PO token
@@ -291,8 +281,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_name]} {_id[os_version]}'
                     ') gzip'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'ios': {
@@ -339,8 +327,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_major]}_{_id[os_minor]}_{_id[os_patch]}'
                     ' like Mac OS X)'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'ios_testsuite_params': {
@@ -389,8 +375,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_major]}_{_id[os_minor]}_{_id[os_patch]}'
                     ' like Mac OS X)'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         # Disabled - requires login but fails using OAuth2 authorisation
@@ -440,8 +424,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[os_major]}_{_id[os_minor]}_{_id[os_patch]}'
                     ' like Mac OS X)'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'v1': {
@@ -462,14 +444,14 @@ class YouTubeRequestClient(BaseRequestsClass):
                 },
             },
             'headers': {
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'v3': {
             '_auth_type': 'user',
             'url': V3_API_URL,
             'method': None,
+            'headers': {
+            },
             'params': {
                 'key': None,
             },
@@ -531,8 +513,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[platform]}'
                     ' Safari/537.36'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         # Used to requests captions for clients that don't provide them
@@ -576,8 +556,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' (ChromiumStylePlatform)'
                     ' Cobalt/Version'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'tv_unplugged': {
@@ -614,8 +592,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' (ChromiumStylePlatform)'
                     ' Cobalt/Version'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'mweb': {
@@ -661,8 +637,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' {_id[platform]}/{_id[os_build]}'
                     ' Safari/604.1,gzip(gfe)'
                 ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         # Used for misc api requests by default
@@ -688,16 +662,6 @@ class YouTubeRequestClient(BaseRequestsClass):
                 },
             },
             'headers': {
-                # UA for a "Galaxy S20 Ultra" from Chrome dev tools device
-                # emulation
-                'User-Agent': (
-                    'Mozilla/5.0 (Linux; Android 10; SM-G981B)'
-                    ' AppleWebKit/537.36 (KHTML, like Gecko)'
-                    ' Chrome/140.0.0.0'
-                    ' Mobile Safari/537.36'
-                ),
-                'X-YouTube-Client-Name': '{_id[client_id]}',
-                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
         },
         'watch_history': {
@@ -779,6 +743,8 @@ class YouTubeRequestClient(BaseRequestsClass):
                     ' Chrome/140.0.0.0'
                     ' Safari/537.36'
                 ),
+                'X-YouTube-Client-Name': '{_id[client_id]}',
+                'X-YouTube-Client-Version': '{_id[client_version]}',
             },
             'params': {
                 'key': ValueError,
