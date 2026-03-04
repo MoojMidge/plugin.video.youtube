@@ -898,8 +898,6 @@ class YouTubeRequestClient(BaseRequestsClass):
 
     @classmethod
     def build_client(cls, client_name=None, data=None):
-        templates = {}
-
         base_client = None
         if client_name:
             base_client = cls.CLIENTS.get(client_name)
@@ -912,10 +910,15 @@ class YouTubeRequestClient(BaseRequestsClass):
         auth_requested = base_client.get('_auth_requested')
         auth_type = base_client.get('_auth_type')
 
-        if data:
-            base_client = merge_dicts(base_client, data)
-        client = merge_dicts(cls.CLIENTS['_common'], base_client, templates)
-        client['_name'] = client_name
+        if data is None:
+            data = {}
+        data['_name'] = client_name
+        client = merge_dicts(
+            cls.CLIENTS['_common'],
+            base_client,
+            data,
+            update_refs=True,
+        )
 
         if auth_required is not None:
             client['_auth_required'] = auth_required
@@ -924,17 +927,33 @@ class YouTubeRequestClient(BaseRequestsClass):
         if auth_type is not None:
             client['_auth_type'] = auth_type
 
+        has_auth = None
+        auth_required = client.get('_auth_required')
+        auth_requested = client.get('_auth_requested')
+        auth_type = client.get('_auth_type')
+        if auth_type:
+            auth_token = client.get('_access_tokens', {}).get(auth_type)
+            api_key = client.get('_api_keys', {}).get(auth_type)
+            if not auth_token:
+                has_auth = False
+        else:
+            auth_token = None
+            api_key = None
+
         headers = client.get('headers')
+        if headers is not None:
+            headers = headers.copy()
+
         client_json = client.get('json')
+        if client_json is not None:
+            client_json = client_json.copy()
         if client_json:
             if 'cpn' in client_json:
                 cpn = client.get('_cpn')
                 if cpn:
                     client_json['cpn'] = cpn
                 else:
-                    client_json = client_json.copy()
                     del client_json['cpn']
-                    client['json'] = client_json
 
             client_config = cls.json_traverse(
                 client_json,
@@ -962,65 +981,44 @@ class YouTubeRequestClient(BaseRequestsClass):
             if headers is not None:
                 headers['X-YouTube-STS'] = str(signature_timestamp)
         elif playback_context:
-            client_json = client_json.copy()
             del client_json['playbackContext']
-            client['json'] = client_json
 
-        for values, template_id, template in templates.values():
-            if template_id in values:
-                values[template_id] = template.format(**client)
+        params = client.get('params')
+        if params is not None:
+            params = params.copy()
 
-        has_auth = None
-        try:
-            params = client['params']
-            auth_required = client.get('_auth_required')
-            auth_requested = client.get('_auth_requested')
-            auth_type = client.get('_auth_type')
-            if auth_type:
-                auth_token = client.get('_access_tokens', {}).get(auth_type)
-                api_key = client.get('_api_keys', {}).get(auth_type)
-                if not auth_token:
-                    has_auth = False
-            else:
-                auth_token = None
-                api_key = None
+        if auth_token and (auth_required or auth_requested):
+            if headers and 'Authorization' in headers:
+                auth_header = headers.get('Authorization') or 'Bearer {0}'
+                headers['Authorization'] = auth_header.format(auth_token)
 
-            if auth_token and (auth_required or auth_requested):
-                if headers is not None and 'Authorization' in headers:
-                    headers = headers.copy()
-                    auth_header = headers.get('Authorization') or 'Bearer {0}'
-                    headers['Authorization'] = auth_header.format(auth_token)
+                auth_user_agent = client.get('_auth_user_agent')
+                if auth_user_agent:
+                    headers['User-Agent'] = auth_user_agent
 
-                    auth_user_agent = client.get('_auth_user_agent')
-                    if auth_user_agent:
-                        headers['User-Agent'] = auth_user_agent
+                has_auth = auth_type
 
-                    client['headers'] = headers
-                    has_auth = auth_type
+            if 'key' in params:
+                del params['key']
+        elif auth_required and auth_required != 'ignore_fail':
+            return None
+        else:
+            if headers and 'Authorization' in headers:
+                del headers['Authorization']
 
-                if 'key' in params:
-                    params = params.copy()
+            if 'key' in params:
+                if params['key'] is ValueError:
                     del params['key']
-                    client['params'] = params
-            elif auth_required and auth_required != 'ignore_fail':
-                return None
-            else:
-                if headers is not None and 'Authorization' in headers:
-                    headers = headers.copy()
-                    del headers['Authorization']
-                    client['headers'] = headers
+                elif api_key:
+                    params['key'] = api_key
 
-                if 'key' in params:
-                    params = params.copy()
-                    if params['key'] is ValueError:
-                        del params['key']
-                    elif api_key:
-                        params['key'] = api_key
-                    client['params'] = params
-
-        except KeyError:
-            pass
         client['_has_auth'] = has_auth
+        if headers is not None:
+            client['headers'] = headers
+        if client_json is not None:
+            client['json'] = client_json
+        if params is not None:
+            client['params'] = params
 
         return client
 
