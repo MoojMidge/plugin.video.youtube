@@ -47,7 +47,7 @@ def run(argv,
         profiler=_profiler):
     ui = context.get_ui()
 
-    if ui.pop_property(CHECK_SETTINGS):
+    if context.pop_global(CHECK_SETTINGS):
         provider.reset_client(context=context)
         settings = context.settings(refresh=True)
     else:

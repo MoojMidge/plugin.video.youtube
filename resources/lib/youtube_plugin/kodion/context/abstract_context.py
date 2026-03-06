@@ -33,6 +33,9 @@ from ..constants import (
     CONTEXT_MENU,
     END,
     FANART_TYPE,
+    GLOBAL_GET,
+    GLOBAL_POP,
+    GLOBAL_SET,
     HIDE_CHANNELS,
     HIDE_FOLDERS,
     HIDE_LIVE,
@@ -787,3 +790,43 @@ class AbstractContext(object):
                        uri=None,
                        from_listitem=True):
         raise NotImplementedError()
+
+    def set_global(self, key, value):
+        return self.ipc_exec(
+            GLOBAL_SET,
+            payload={
+                'key': key,
+                'value': value,
+            },
+            stacklevel=3,
+        )
+
+    def get_global(self, key):
+        return self.ipc_exec(
+            GLOBAL_GET,
+            timeout=-1,
+            payload={
+                'key': key,
+            },
+            stacklevel=3,
+        )
+
+    def pop_global(self, key):
+        return self.ipc_exec(
+            GLOBAL_POP,
+            timeout=-1,
+            payload={
+                'key': key,
+            },
+            stacklevel=3,
+        )
+
+    def get_globals(self):
+        return self.ipc_exec(
+            GLOBAL_GET,
+            timeout=-1,
+            payload={
+                'key': None,
+            },
+            stacklevel=3,
+        )

@@ -64,6 +64,7 @@ YOUTUBE_HOSTNAMES = frozenset((
 # Flags
 ABORT_FLAG = 'abort_requested'
 BUSY_FLAG = 'busy'
+FAIL_FLAG = '__failed__'
 SERVICE_RUNNING_FLAG = 'service_monitor_running'
 WAIT_END_FLAG = 'builtin_completed'
 TRAKT_PAUSE_FLAG = 'script.trakt.paused'
@@ -107,6 +108,9 @@ CHECK_SETTINGS = 'check_settings'
 CONTEXT_MENU = 'cxm_action'
 FILE_READ = 'file_read'
 FILE_WRITE = 'file_write'
+GLOBAL_GET = 'get_global'
+GLOBAL_POP = 'pop_global'
+GLOBAL_SET = 'set_global'
 KEYMAP = 'key_action'
 LOAD_STREAM_INFO = 'load_stream_info'
 PLAYBACK_INIT = 'playback_init'
@@ -236,6 +240,7 @@ __all__ = (
     # Flags
     'ABORT_FLAG',
     'BUSY_FLAG',
+    'FAIL_FLAG',
     'SERVICE_RUNNING_FLAG',
     'TRAKT_PAUSE_FLAG',
     'WAIT_END_FLAG',
@@ -279,6 +284,9 @@ __all__ = (
     'CONTEXT_MENU',
     'FILE_READ',
     'FILE_WRITE',
+    'GLOBAL_GET',
+    'GLOBAL_POP',
+    'GLOBAL_SET',
     'KEYMAP',
     'LOAD_STREAM_INFO',
     'PLAYBACK_INIT',
