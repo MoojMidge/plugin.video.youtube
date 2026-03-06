@@ -237,7 +237,7 @@ class XbmcPlugin(AbstractPlugin):
                 ui.on_ok('Error in ContentProvider', exc.__str__())
 
         if not ui.pop_property(REFRESH_CONTAINER, as_bool=True) and forced:
-            played_video_id = ui.pop_property(PLAYER_VIDEO_ID)
+            played_video_id = context.pop_global(PLAYER_VIDEO_ID)
             if played_video_id:
                 focused_video_id = None
             else:
@@ -248,7 +248,7 @@ class XbmcPlugin(AbstractPlugin):
             played_video_id = None
         sync_items = (focused_video_id, played_video_id)
 
-        play_cancelled = ui.pop_property(PLAY_CANCELLED)
+        play_cancelled = context.pop_global(PLAY_CANCELLED)
         if play_cancelled:
             result = None
 
@@ -409,7 +409,7 @@ class XbmcPlugin(AbstractPlugin):
                 post_run_operations.append(_post_run_operation)
                 _post_run_operation = None
 
-        if ui.pop_property(PLAY_FORCED):
+        if context.pop_global(PLAY_FORCED):
             context.set_path(PATHS.PLAY)
             return self.run(provider, context, forced=forced)
 

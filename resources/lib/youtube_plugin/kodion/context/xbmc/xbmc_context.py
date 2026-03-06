@@ -32,6 +32,7 @@ from ...constants import (
     CATEGORY_LABEL,
     CHANNEL_ID,
     CONTENT,
+    FAIL_FLAG,
     FOLDER_NAME,
     FOLDER_URI,
     PLAYLIST_ID,
@@ -69,6 +70,8 @@ class IPCMonitor(xbmc.Monitor):
         self.latency = None
         self.received = False
 
+        if timeout < 0:
+            timeout = False
         wait_period = 0.01
         elapsed = 0
         self._start = default_timer()
@@ -1048,13 +1051,11 @@ class XbmcContext(AbstractContext):
 
         if not timeout:
             return None
-        if timeout < 0:
-            timeout = None
 
         response = IPCMonitor(target, timeout)
         if response.received:
             value = response.value
-            if value is False:
+            if value == FAIL_FLAG:
                 log_level = logging.ERROR
                 log_value = 'FAILED'
                 stack_info = True
@@ -1080,7 +1081,7 @@ class XbmcContext(AbstractContext):
                 ' TIMED OUT (in {time_s:.2f}s)',
                 target=target,
                 payload=payload,
-                time_s=timeout,
+                time_s=-1 if timeout is None else timeout,
                 stacklevel=stacklevel,
             )
         return value
