@@ -16,7 +16,7 @@ from os.path import join as os_path_join
 
 from .. import logging
 from ..compatibility import to_unicode
-from ..constants import DATA_PATH, FILE_READ, FILE_WRITE
+from ..constants import DATA_PATH, FAIL_FLAG, FILE_READ, FILE_WRITE
 from ..utils.file_system import make_dirs
 from ..utils.methods import merge_dicts
 
@@ -108,7 +108,7 @@ class JSONStore(object):
                     payload={'filepath': filepath},
                     raise_exc=True,
                 )
-                if response is False:
+                if response == FAIL_FLAG:
                     raise IOError
                 if response is None:
                     self.log.debug('Unchanged: %s',
@@ -147,13 +147,12 @@ class JSONStore(object):
                         timeout=5,
                         payload={'filepath': filepath},
                         raise_exc=True,
-                ) is not False:
-                    data = self._context.get_ui().get_property(
-                        '-'.join((FILE_READ, filepath)),
-                        log_redact='REDACTED',
-                    )
-                else:
+                ) == FAIL_FLAG:
                     raise IOError
+                data = self._context.get_ui().get_property(
+                    '-'.join((FILE_READ, filepath)),
+                    log_redact='REDACTED',
+                )
             else:
                 with open(filepath, mode='r', encoding='utf-8') as file:
                     data = file.read()
