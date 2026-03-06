@@ -99,6 +99,9 @@ class XbmcPlugin(AbstractPlugin):
         uri = context.get_uri()
         path = context.get_path().rstrip('/')
 
+        is_play_path = path == PATHS.PLAY
+        force_play = context.pop_global(PLAY_FORCED)
+
         route = ui.pop_property(REROUTE_PATH)
         _post_run_operation = None
         post_run_operations = []
@@ -114,7 +117,7 @@ class XbmcPlugin(AbstractPlugin):
 
             playlist_player = context.playlist_player()
             position, remaining = playlist_player.get_position()
-            playing = path == PATHS.PLAY and playlist_player.is_playing()
+            playing = is_play_path and playlist_player.is_playing()
 
             if playing:
                 items = playlist_player.get_items()
@@ -301,8 +304,9 @@ class XbmcPlugin(AbstractPlugin):
                     to_sync=sync_items,
                 ))
         else:
-            result_item = result
             result_item_type = result.__class__.__name__
+            if result_item_type in self._PLAY_ITEM_MAP:
+                result_item = result
 
         if items:
             content_type = options.get(provider.CONTENT_TYPE)
@@ -324,13 +328,15 @@ class XbmcPlugin(AbstractPlugin):
             cache_to_disc = options.get(provider.CACHE_TO_DISC, False)
             update_listing = options.get(provider.UPDATE_LISTING, True)
 
-        if result_item and result_item_type in self._PLAY_ITEM_MAP:
-            if not forced and not force_resolve and path != PATHS.PLAY:
-                force_play = True
-            else:
-                force_play = options.get(provider.FORCE_PLAY)
-
-            if force_play or not result_item.playable:
+        if result_item:
+            if force_play and force_resolve and result_item.playable:
+                pass
+            elif (
+                    (not forced and not force_resolve and not is_play_path)
+                    or (force_resolve and not is_play_path)
+                    or (not force_play and options.get(provider.FORCE_PLAY))
+                    or not result_item.playable
+            ):
                 _, _post_run_operation = self.uri_operation(
                     context,
                     result_item.get_uri()
@@ -338,6 +344,8 @@ class XbmcPlugin(AbstractPlugin):
                 if _post_run_operation:
                     post_run_operations.append(_post_run_operation)
                     _post_run_operation = None
+                    force_play = False
+                    succeeded = bool(items)
             else:
                 item = self._PLAY_ITEM_MAP[result_item_type](
                     context,
@@ -361,12 +369,24 @@ class XbmcPlugin(AbstractPlugin):
                         fallback,
                     )
                 else:
-                    context.parse_uri(fallback, update=True)
-                    return self.run(provider, context, forced=forced)
+                    path, params = context.parse_uri(fallback, update=True)
+                    logging.info(('Handle: {handle}',
+                                  'Path:   {path!r} (new)',
+                                  'Params: {params!p}',
+                                  'Forced: False'),
+                                 handle=handle,
+                                 path=path,
+                                 params=params)
+                    return self.run(
+                        provider,
+                        context,
+                        forced=False,
+                        is_same_path=False,
+                    )
             elif fallback:
                 if play_cancelled:
                     _, _post_run_operation = self.uri_operation(context, uri)
-                elif path == PATHS.PLAY:
+                elif is_play_path:
                     context.send_notification(
                         PLAYBACK_FAILED,
                         {VIDEO_ID: context.get_param(VIDEO_ID)},
@@ -409,9 +429,29 @@ class XbmcPlugin(AbstractPlugin):
                 post_run_operations.append(_post_run_operation)
                 _post_run_operation = None
 
-        if context.pop_global(PLAY_FORCED):
-            context.set_path(PATHS.PLAY)
-            return self.run(provider, context, forced=forced)
+        if force_play:
+            if result_item and not is_play_path:
+                play_uri = result_item.get_uri()
+            else:
+                play_uri = uri
+            path, params = context.parse_uri(
+                play_uri,
+                replace={'path': PATHS.PLAY},
+                update=True,
+            )
+            logging.info(('Handle: {handle}',
+                          'Path:   {path!r} (new)',
+                          'Params: {params!p}',
+                          'Forced: False'),
+                         handle=handle,
+                         path=path,
+                         params=params)
+            return self.run(
+                provider,
+                context,
+                forced=False,
+                is_same_path=False,
+            )
 
         xbmcplugin.endOfDirectory(
             handle,
