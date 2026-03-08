@@ -566,18 +566,40 @@ class AbstractContext(object):
 
         return params
 
-    def parse_uri(self, uri, parse_params=True, parse_path=True, update=False):
-        uri = urlsplit(uri)
-        path = uri.path
-        if not parse_params:
-            return path, uri.query
+    def parse_uri(self,
+                  uri,
+                  parse_params=True,
+                  parse_path=True,
+                  replace=None,
+                  update=False):
+        parts = urlsplit(uri)
+        original_path = parts.path
+        original_query = parts.query
+        if replace:
+            parts = parts._replace(**replace)
+            path = parts.path
+            query = parts.query
+        else:
+            path = original_path
+            query = original_query
 
-        params = dict(parse_qsl(uri.query, keep_blank_values=True))
+        if not parse_params:
+            return path, query
+
+        _params = {}
 
         if parse_path:
-            params.update(self.parse_path(path))
+            if path != original_path:
+                _params.update(self.parse_path(original_path))
+            _params.update(self.parse_path(path))
 
-        params = self.parse_params(params, update=False)
+        if query != original_query:
+            _params.update(parse_qsl(original_query, keep_blank_values=True))
+            _params.update(parse_qsl(query, keep_blank_values=True))
+        else:
+            _params.update(parse_qsl(query, keep_blank_values=True))
+
+        params = self.parse_params(_params, update=False)
 
         if update:
             self._params = params
