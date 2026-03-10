@@ -189,7 +189,7 @@ class APIKeyStore(JSONStore):
         if not config:
             return {}
 
-        if not context.get_settings().allow_dev_keys():
+        if not context.settings().allow_dev_keys():
             self.log.debug('Developer config ignored')
             return {}
 
@@ -264,7 +264,7 @@ class APIKeyStore(JSONStore):
 
     def sync(self, update_store=False, update_settings=False):
         api_data = self.get_data()
-        settings = self._context.get_settings()
+        settings = self._context.settings()
 
         forced = update_store
         stored_values = (
@@ -343,7 +343,7 @@ class APIKeyStore(JSONStore):
     def update(self):
         context = self._context
         localize = context.localize
-        settings = context.get_settings()
+        settings = context.settings()
         ui = context.get_ui()
 
         params = context.get_params()

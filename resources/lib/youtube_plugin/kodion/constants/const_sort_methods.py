@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import sys
+from sys import modules as sys_modules
 
 from . import const_content_types as CONTENT
 from ..compatibility import (
@@ -78,7 +78,7 @@ methods = [
     ('VIDEO_ORIGINAL_TITLE_IGNORE_THE', 20376,    None),
 ]
 
-SORT = sys.modules[__name__]
+SORT = sys_modules[__name__]
 name = label_id = sort_by = sort_method = None
 for name, label_id, sort_by in methods:
     sort_method = getattr(xbmcplugin, 'SORT_METHOD_' + name, 0)
@@ -177,7 +177,7 @@ COMMENTS_CONTENT_SIMPLE = (
 )
 
 del (
-    sys,
+    sys_modules,
     CONTENT,
     xbmcplugin,
     methods,

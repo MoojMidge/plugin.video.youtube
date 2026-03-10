@@ -166,6 +166,7 @@ WINDOW_RETURN = 'window_return'
 # Plugin url query parameters
 ACTION = 'action'
 ADDON_ID_PARAM = 'addon_id'
+CATEGORY_LABEL = 'category_label'
 CHANNEL_IDS = 'channel_ids'
 CLIP = 'clip'
 END = 'end'
@@ -182,11 +183,14 @@ HIDE_SHORTS = 'hide_shorts'
 HIDE_VIDEOS = 'hide_videos'
 INCOGNITO = 'incognito'
 ITEM_FILTER = 'item_filter'
+ITEM_NAME = 'item_name'
 ITEMS_PER_PAGE = 'items_per_page'
 LIVE = 'live'
 ORDER = 'order'
 PAGE = 'page'
+PAGE_TOKEN = 'page_token'
 PLAYLIST_IDS = 'playlist_ids'
+RELOAD_PATH = 'reload_path'
 SCREENSAVER = 'screensaver'
 SEEK = 'seek'
 START = 'start'
@@ -214,7 +218,6 @@ INHERITED_PARAMS = frozenset((
     PLAY_PROMPT_SUBTITLES,
     PLAY_USING,
 ))
-
 
 __all__ = (
     # Addon paths
@@ -329,6 +332,7 @@ __all__ = (
     # Plugin url query parameters
     'ACTION',
     'ADDON_ID_PARAM',
+    'CATEGORY_LABEL',
     'CHANNEL_IDS',
     'CLIP',
     'END',
@@ -345,11 +349,14 @@ __all__ = (
     'HIDE_VIDEOS',
     'INCOGNITO',
     'ITEM_FILTER',
+    'ITEM_NAME',
     'ITEMS_PER_PAGE',
     'LIVE',
     'ORDER',
     'PAGE',
+    'PAGE_TOKEN',
     'PLAYLIST_IDS',
+    'RELOAD_PATH',
     'SCREENSAVER',
     'SEEK',
     'START',

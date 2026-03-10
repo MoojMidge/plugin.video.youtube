@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import json
+from json import dumps as json_dumps, loads as json_loads
 
 from ..abstract_playlist_player import AbstractPlaylistPlayer
 from ... import logging
@@ -186,7 +186,7 @@ class XbmcPlaylistPlayer(AbstractPlaylistPlayer):
 
         try:
             result = response['result']['items']
-            return json.dumps(result, ensure_ascii=False) if dumps else result
+            return json_dumps(result, ensure_ascii=False) if dumps else result
         except (KeyError, TypeError, ValueError):
             error = response.get('error', {})
             self.log.exception(('Error',
@@ -198,7 +198,7 @@ class XbmcPlaylistPlayer(AbstractPlaylistPlayer):
 
     def add_items(self, items, loads=False):
         if loads:
-            items = json.loads(items)
+            items = json_loads(items)
 
         # Playlist.GetItems allows retrieving full playlist item details, but
         # Playlist.Add only allows for file/path/id etc.

@@ -36,21 +36,22 @@ class DataCache(Storage):
                                   values_only=values_only)
         return result
 
-    def get_items_like(self, content_id, seconds=None):
-        result = self._get_by_ids((content_id,),
-                                  seconds=seconds,
-                                  wildcard=True,
-                                  as_dict=True,
-                                  values_only=False)
-        return result
-
-    def get_item_like(self, content_id, seconds=None, first=False):
+    def get_items_like(self, content_id, seconds=None, oldest_first=False):
         result = self._get_by_ids((content_id,),
                                   seconds=seconds,
                                   wildcard=True,
                                   as_dict=False,
                                   values_only=False,
-                                  oldest_first=first,
+                                  oldest_first=oldest_first)
+        return result
+
+    def get_item_like(self, content_id, seconds=None, oldest_first=False):
+        result = self._get_by_ids((content_id,),
+                                  seconds=seconds,
+                                  wildcard=True,
+                                  as_dict=False,
+                                  values_only=False,
+                                  oldest_first=oldest_first,
                                   limit=1)
         return result
 

@@ -9,7 +9,7 @@
 """
 
 import time
-import uuid
+from uuid import uuid4
 
 from .json_store import JSONStore
 from ..compatibility import string_type
@@ -148,7 +148,7 @@ class AccessManager(JSONStore):
                     uuids.add(user_uuid)
                     continue
             while not user_uuid or user_uuid in uuids:
-                user_uuid = uuid.uuid4().hex
+                user_uuid = uuid4().hex
             uuids.add(user_uuid)
             user['id'] = user_uuid
         # end uuid check
@@ -199,7 +199,7 @@ class AccessManager(JSONStore):
         ]
         new_uuid = None
         while not new_uuid or new_uuid in uuids:
-            new_uuid = uuid.uuid4().hex
+            new_uuid = uuid4().hex
         return dict(self.DEFAULT_NEW_USER,
                     name=username,
                     id=new_uuid)
@@ -328,7 +328,7 @@ class AccessManager(JSONStore):
         current_id = current_id.strip()
         current_id_lower = current_id.lower()
 
-        settings = self._context.get_settings()
+        settings = self._context.settings()
         settings_id = settings.get_watch_later_playlist()
         settings_id_lower = settings_id.lower()
 
@@ -353,7 +353,7 @@ class AccessManager(JSONStore):
         if not playlist_id:
             playlist_id = ''
 
-        self._context.get_settings().set_watch_later_playlist('')
+        self._context.settings().set_watch_later_playlist('')
 
         playlists = {
             'watch_later': playlist_id,
@@ -382,7 +382,7 @@ class AccessManager(JSONStore):
         current_id = current_id.strip()
         current_id_lower = current_id.lower()
 
-        settings = self._context.get_settings()
+        settings = self._context.settings()
         settings_id = settings.get_history_playlist()
         settings_id_lower = settings_id.lower()
 
@@ -407,7 +407,7 @@ class AccessManager(JSONStore):
         if not playlist_id:
             playlist_id = ''
 
-        self._context.get_settings().set_history_playlist('')
+        self._context.settings().set_history_playlist('')
 
         playlists = {
             'watch_history': playlist_id,

@@ -12,13 +12,20 @@ from __future__ import absolute_import, division, unicode_literals
 
 from ..helper import v3
 from ...kodion import KodionException
-from ...kodion.constants import CHANNEL_ID, CONTENT, SUBSCRIPTION_ID
+from ...kodion.constants import (
+    CATEGORY_LABEL,
+    CHANNEL_ID,
+    CONTENT,
+    PAGE_TOKEN,
+    PATHS,
+    SUBSCRIPTION_ID,
+)
 from ...kodion.items import UriItem
 
 
 def _process_list(provider, context, client):
     json_data = client.get_subscription(
-        'mine', page_token=context.get_param('page_token', '')
+        'mine', page_token=context.get_param(PAGE_TOKEN, '')
     )
     if not json_data:
         return []
@@ -28,7 +35,7 @@ def _process_list(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.LIST_CONTENT,
             'sub_type': None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options

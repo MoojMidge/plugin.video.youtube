@@ -1229,7 +1229,7 @@
                         <heading>14068</heading>
                     </control>
                 </setting>
-                <setting id="kodion.http.listen.select" type="action" parent="kodion.view.override" label="30644" help="">
+                <setting id="kodion.http.listen.select" type="action" label="30644" help="">
                     <level>0</level>
                     <constraints>
                         <allowempty>true</allowempty>
@@ -1239,7 +1239,7 @@
                         <close>true</close>
                     </control>
                 </setting>
-                <setting id="kodion.http.client.ip" type="action" parent="kodion.view.override" label="30698" help="">
+                <setting id="kodion.http.client.ip" type="action" label="30698" help="">
                     <level>0</level>
                     <constraints>
                         <allowempty>true</allowempty>

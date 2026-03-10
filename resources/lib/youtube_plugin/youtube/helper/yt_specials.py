@@ -15,6 +15,7 @@ from functools import partial
 from . import UrlResolver, UrlToItemConverter, utils, v3
 from ...kodion import KodionException, logging
 from ...kodion.constants import (
+    CATEGORY_LABEL,
     CHANNEL_ID,
     CHANNEL_IDS,
     CONTENT,
@@ -23,7 +24,9 @@ from ...kodion.constants import (
     HIDE_SHORTS,
     HIDE_VIDEOS,
     INCOGNITO,
+    ITEM_NAME,
     PAGE,
+    PAGE_TOKEN,
     PATHS,
     PLAYLIST_ID,
     PLAYLIST_IDS,
@@ -45,7 +48,7 @@ def _process_related_videos(provider, context, client):
             function_cache.ONE_HOUR,
             _refresh=refresh,
             video_id=video_id,
-            page_token=params.get('page_token', ''),
+            page_token=params.get(PAGE_TOKEN, ''),
         )
         if not json_data:
             return False, None
@@ -61,7 +64,7 @@ def _process_related_videos(provider, context, client):
         json_data['_post_filler'] = filler
         category_label = context.localize(
             'video.related.to.x',
-            params.get('item_name') or context.localize('untitled'),
+            params.get(ITEM_NAME) or context.localize('untitled'),
         )
     else:
         json_data = function_cache.run(
@@ -83,7 +86,7 @@ def _process_related_videos(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
             'sub_type': None,
-            'category_label': category_label,
+            CATEGORY_LABEL: category_label,
         },
     }
     return result, options
@@ -99,12 +102,12 @@ def _process_comments(provider, context, client):
     if video_id:
         json_data = client.get_parent_comments(
             video_id=video_id,
-            page_token=params.get('page_token', ''),
+            page_token=params.get(PAGE_TOKEN, ''),
         )
     elif parent_id:
         json_data = client.get_child_comments(
             parent_id=parent_id,
-            page_token=context.get_param('page_token', ''),
+            page_token=context.get_param(PAGE_TOKEN, ''),
         )
     else:
         json_data = None
@@ -116,7 +119,7 @@ def _process_comments(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.LIST_CONTENT,
             'sub_type': CONTENT.COMMENTS,
-            'category_label': params.get('item_name', video_id),
+            CATEGORY_LABEL: params.get(ITEM_NAME, video_id),
         },
     }
     return result, options
@@ -140,7 +143,7 @@ def _process_recommendations(provider, context, client):
         browse_id=browse_id,
         client=browse_client,
         do_auth=True,
-        page_token=params.get('page_token'),
+        page_token=params.get(PAGE_TOKEN),
         click_tracking=params.get('click_tracking'),
         visitor=params.get('visitor'),
         json_path=browse_paths,
@@ -171,7 +174,7 @@ def _process_recommendations(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
             'sub_type': None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options
@@ -179,7 +182,7 @@ def _process_recommendations(provider, context, client):
 
 def _process_trending(provider, context, client):
     json_data = client.get_trending_videos(
-        page_token=context.get_param('page_token'),
+        page_token=context.get_param(PAGE_TOKEN),
     )
     if not json_data:
         return False, None
@@ -191,7 +194,7 @@ def _process_trending(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
             'sub_type': None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options
@@ -216,7 +219,7 @@ def _process_browse_channels(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.LIST_CONTENT,
             'sub_type': None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options
@@ -224,7 +227,7 @@ def _process_browse_channels(provider, context, client):
 
 def _process_disliked_videos(provider, context, client):
     json_data = client.get_disliked_videos(
-        page_token=context.get_param('page_token', '')
+        page_token=context.get_param(PAGE_TOKEN, '')
     )
     if not json_data:
         return False, None
@@ -234,7 +237,7 @@ def _process_disliked_videos(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
             'sub_type': None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options
@@ -247,7 +250,7 @@ def _process_live_events(provider, context, client, event_type='live'):
         event_type=event_type,
         order=params.get('order',
                          'date' if event_type == 'upcoming' else 'viewCount'),
-        page_token=params.get('page_token', ''),
+        page_token=params.get(PAGE_TOKEN, ''),
         location=params.get('location', False),
         after={'days': 3} if event_type == 'completed' else None,
     )
@@ -259,7 +262,7 @@ def _process_live_events(provider, context, client, event_type='live'):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
             'sub_type': None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options
@@ -324,7 +327,7 @@ def _process_description_links(provider, context):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
         return result, options
@@ -363,9 +366,9 @@ def _process_description_links(provider, context):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.LIST_CONTENT,
                 'sub_type': None,
-                'category_label': context.localize(
+                CATEGORY_LABEL: context.localize(
                     'video.description_links.from.x',
-                    params.get('item_name') or context.localize('untitled'),
+                    params.get(ITEM_NAME) or context.localize('untitled'),
                 ),
             },
         }
@@ -410,7 +413,7 @@ def _process_description_links(provider, context):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
         return result, options
@@ -449,7 +452,7 @@ def _process_saved_playlists(provider, context, client):
         skip_ids=own_channel,
         response_type=browse_response_type,
         do_auth=True,
-        page_token=params.get('page_token'),
+        page_token=params.get(PAGE_TOKEN),
         click_tracking=params.get('click_tracking'),
         visitor=params.get('visitor'),
         json_path=browse_paths,
@@ -479,7 +482,7 @@ def _process_saved_playlists(provider, context, client):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.LIST_CONTENT,
             'sub_type': None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options
@@ -504,7 +507,7 @@ def _process_my_subscriptions(provider,
             background=True,
     ) as progress_dialog:
         json_data = client.get_my_subscriptions(
-            page_token=context.get_param('page', 1),
+            page_token=context.get_param(PAGE, 1),
             do_filter=filtered,
             feed_type=feed_type,
             refresh=refresh,
@@ -583,7 +586,7 @@ def _process_my_subscriptions(provider,
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
         result.extend(v3.response_to_items(
@@ -615,7 +618,7 @@ def _process_virtual_list(provider, context, _client, playlist_id=None):
     resource_manager = provider.get_resource_manager(context)
     json_data = resource_manager.get_playlist_items(
         batch_id=(playlist_id, 0),
-        page_token=params.get('page_token'),
+        page_token=params.get(PAGE_TOKEN),
     )
     if not json_data:
         return False, None
@@ -637,7 +640,7 @@ def _process_virtual_list(provider, context, _client, playlist_id=None):
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
             'sub_type': CONTENT.HISTORY if playlist_id == 'HL' else None,
-            'category_label': None,
+            CATEGORY_LABEL: None,
         },
     }
     return result, options

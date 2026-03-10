@@ -9,7 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import os
+from os import path as os_path
 
 from . import logging
 from .compatibility import parse_qsl, urlsplit, xbmc, xbmcaddon, xbmcvfs
@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 
 def _config_actions(context, action, *_args):
     localize = context.localize
-    settings = context.get_settings()
+    settings = context.settings()
     ui = context.get_ui()
 
     if action == 'youtube':
@@ -132,7 +132,7 @@ def _config_actions(context, action, *_args):
         url = httpd_status(context, path=PATHS.API)
         if url:
             ui.on_ok(context.localize('api.config'),
-                     context.localize('go_to.x', ui.bold(url)))
+                     context.localize('go.to.x', ui.bold(url)))
         else:
             ui.show_notification(context.localize('httpd.not.running'))
 
@@ -141,13 +141,13 @@ def _config_actions(context, action, *_args):
         locator.locate_requester()
         coords = locator.coordinates()
         if coords:
-            context.get_settings().set_location(
+            context.settings().set_location(
                 '{0[lat]},{0[lon]}'.format(coords)
             )
 
     elif action == 'language_region':
         client = Provider().get_client(context)
-        settings = context.get_settings()
+        settings = context.settings()
 
         plugin_language = settings.get_language()
         plugin_region = settings.get_region()
@@ -230,7 +230,7 @@ def _config_actions(context, action, *_args):
             return
 
         # set new language id and region id
-        settings = context.get_settings()
+        settings = context.settings()
         settings.set_language(language_id)
         settings.set_region(region_id)
 
@@ -271,12 +271,12 @@ def _maintenance_actions(context, action, params):
                 context.get_name(), localize('refresh.settings.check')
         ):
             if not context.get_system_version().compatible(20):
-                ui.show_notification(localize('failed'))
+                ui.show_notification(localize('refresh.settings.failed'))
                 return
 
             import xml.etree.ElementTree as ET
 
-            path = xbmcvfs.translatePath(os.path.join(DATA_PATH, path))
+            path = xbmcvfs.translatePath(os_path.join(DATA_PATH, path))
             xml = ET.parse(path)
             settings = xml.getroot()
 
@@ -326,9 +326,9 @@ def _maintenance_actions(context, action, params):
         if target == 'temp_dir':
             target = path[0]
         elif target == 'other_dir':
-            target = os.path.basename(os.path.dirname(path[0]))
+            target = os_path.basename(os_path.dirname(path[0]))
         elif target == 'other_file':
-            target = os.path.basename(path[1])
+            target = os_path.basename(path[1])
         else:
             target = path
         if not ui.on_delete_content(target):
@@ -351,7 +351,7 @@ def _maintenance_actions(context, action, params):
         if len(path) == 1:
             succeeded = rm_dir(path[0])
         else:
-            succeeded = xbmcvfs.delete(os.path.join(*path))
+            succeeded = xbmcvfs.delete(os_path.join(*path))
         ui.show_notification(localize('succeeded' if succeeded else 'failed'))
 
 
@@ -489,7 +489,7 @@ def run(argv):
             if params:
                 params = dict(parse_qsl(args.query))
 
-        log_level = context.get_settings().log_level()
+        log_level = context.settings().log_level()
         if log_level:
             log.debugging = True
             # Verbose

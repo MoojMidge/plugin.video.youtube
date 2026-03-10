@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from . import menu_items
 from .directory_item import DirectoryItem
-from ..constants import ITEMS_PER_PAGE, PAGE, PATHS
+from ..constants import ITEMS_PER_PAGE, PAGE, PAGE_TOKEN, PATHS
 
 
 class NextPageItem(DirectoryItem):
@@ -40,8 +40,8 @@ class NextPageItem(DirectoryItem):
                                              PATHS.RECOMMENDATIONS,
                                              PATHS.RELATED_VIDEOS,
                                              PATHS.VIRTUAL_PLAYLIST)))
-        if can_jump and not is_first_page_link and 'page_token' not in params:
-            params['page_token'] = self.create_page_token(page, items_per_page)
+        if can_jump and not is_first_page_link and PAGE_TOKEN not in params:
+            params[PAGE_TOKEN] = self.create_page_token(page, items_per_page)
 
         can_search = not path.startswith(PATHS.SEARCH)
 

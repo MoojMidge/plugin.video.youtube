@@ -40,6 +40,7 @@ from ...kodion.constants import (
     INHERITED_PARAMS,
     ITEM_FILTER,
     PAGE,
+    PAGE_TOKEN,
     PATHS,
     PLAYLIST_ID,
     VIDEO_ID,
@@ -96,7 +97,7 @@ def _process_list_response(provider,
         if param in params
     }
 
-    settings = context.get_settings()
+    settings = context.settings()
     thumb_re = re_compile(r'[^/._]+(?=[^/.]*?\.(?:jpg|webp))')
     thumb_size = settings.get_thumbnail_size()
     fanart_type = params.get(FANART_TYPE)
@@ -735,7 +736,7 @@ def response_to_items(provider,
                       hide_progress=None,
                       log=_log):
     params = context.get_params()
-    settings = context.get_settings()
+    settings = context.settings()
     ui = context.get_ui()
 
     items_per_page = settings.items_per_page()
@@ -902,20 +903,20 @@ def response_to_items(provider,
                       exclude=exclude_next)
     if post_fill_attempts <= 0:
         next_page = 1
-        new_params['page'] = 1
-        if 'page_token' in new_params:
-            del new_params['page_token']
-        elif 'page' in params:
-            new_params['page_token'] = ''
+        new_params[PAGE] = 1
+        if PAGE_TOKEN in new_params:
+            del new_params[PAGE_TOKEN]
+        elif PAGE in params:
+            new_params[PAGE_TOKEN] = ''
     elif page_token == next_page:
-        new_params['page_token'] = ''
+        new_params[PAGE_TOKEN] = ''
     elif page_token:
-        new_params['page_token'] = page_token
+        new_params[PAGE_TOKEN] = page_token
     else:
-        if 'page_token' in new_params:
-            del new_params['page_token']
-        elif 'page' in params:
-            new_params['page_token'] = ''
+        if PAGE_TOKEN in new_params:
+            del new_params[PAGE_TOKEN]
+        elif PAGE in params:
+            new_params[PAGE_TOKEN] = ''
         else:
             return items
 
@@ -928,7 +929,7 @@ def response_to_items(provider,
             new_params['items_per_page'] = yt_results_per_page
         elif ui.get_container_info(FOLDER_URI):
             next_page = 1
-            new_params['page'] = 1
+            new_params[PAGE] = 1
         else:
             return items
 

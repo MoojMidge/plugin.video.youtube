@@ -203,8 +203,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
                      'refresh_token': refresh_token,
                      'grant_type': 'refresh_token'}
 
-        log_info = ('Refresh token request ({login_type})',
-                    'Params: {log_params!p}',)
+        log_info = '{login_type} request: {log_params!p}'
         self.log.debug(
             log_info,
             login_type=login_type,
@@ -249,8 +248,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
                      'code': code,
                      'grant_type': 'http://oauth.net/grant_type/device/1.0'}
 
-        log_info = ('Access token request ({login_type})',
-                    'Params: {log_params!p}',)
+        log_info = '{login_type} request: {log_params!p}'
         self.log.debug(
             log_info,
             login_type=login_type,
@@ -292,8 +290,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
         post_data = {'client_id': client_id,
                      'scope': 'https://www.googleapis.com/auth/youtube'}
 
-        log_info = ('Device/user code request ({login_type})',
-                    'Params: {log_params!p}',)
+        log_info = '{login_type} request: {log_params!p}'
         self.log.debug(
             log_info,
             login_type=login_type,
