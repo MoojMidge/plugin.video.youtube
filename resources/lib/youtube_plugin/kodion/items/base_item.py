@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import json
+from json import JSONEncoder, dumps as json_dumps
 
 from .menu_items import separator
 from ..compatibility import (
@@ -90,7 +90,7 @@ class BaseItem(object):
         return {'type': self.__class__.__name__, 'data': self.__dict__}
 
     def __repr__(self):
-        return json.dumps(
+        return json_dumps(
             self.__repr_data__(),
             ensure_ascii=False,
             cls=_Encoder
@@ -344,7 +344,7 @@ class BaseItem(object):
         return self._special_sort
 
 
-class _Encoder(json.JSONEncoder):
+class _Encoder(JSONEncoder):
     def encode(self, obj, nested=False):
         if isinstance(obj, date_types):
             class_name = obj.__class__.__name__

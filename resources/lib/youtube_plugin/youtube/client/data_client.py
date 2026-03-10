@@ -10,10 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import json
 import threading
 from functools import partial
 from itertools import chain, islice
+from json import loads as json_loads
 from random import randint
 from re import compile as re_compile
 from xml.etree.ElementTree import (
@@ -368,7 +368,7 @@ class YouTubeDataClient(YouTubeLoginClient):
         self.channel_id = None
 
         if items_per_page is None:
-            items_per_page = context.get_settings().items_per_page()
+            items_per_page = context.settings().items_per_page()
 
         super(YouTubeDataClient, self).__init__(context=context, **kwargs)
         YouTubeDataClient.init(items_per_page=items_per_page)
@@ -440,8 +440,10 @@ class YouTubeDataClient(YouTubeLoginClient):
                          cache=False)
 
     def remove_playlist(self, playlist_id, **kwargs):
-        params = {'id': playlist_id,
-                  'mine': True}
+        params = {
+            'id': playlist_id,
+            'mine': True,
+        }
         return self.api_request(method='DELETE', path='playlists',
                                 params=params,
                                 do_auth=True,
@@ -479,21 +481,37 @@ class YouTubeDataClient(YouTubeLoginClient):
                         new_title,
                         privacy_status='private',
                         **kwargs):
-        params = {'part': 'snippet,id,status'}
-        post_data = {'kind': 'youtube#playlist',
-                     'id': playlist_id,
-                     'snippet': {'title': new_title},
-                     'status': {'privacyStatus': privacy_status}}
+        params = {
+            'part': 'snippet,id,status',
+        }
+        post_data = {
+            'kind': 'youtube#playlist',
+            'id': playlist_id,
+            'snippet': {
+                'title': new_title,
+            },
+            'status': {
+                'privacyStatus': privacy_status,
+            },
+        }
         return self.api_request(method='PUT', path='playlists',
                                 params=params,
                                 post_data=post_data,
                                 **kwargs)
 
     def create_playlist(self, title, privacy_status='private', **kwargs):
-        params = {'part': 'snippet,status'}
-        post_data = {'kind': 'youtube#playlist',
-                     'snippet': {'title': title},
-                     'status': {'privacyStatus': privacy_status}}
+        params = {
+            'part': 'snippet,status',
+        }
+        post_data = {
+            'kind': 'youtube#playlist',
+            'snippet': {
+                'title': title,
+            },
+            'status': {
+                'privacyStatus': privacy_status,
+            },
+        }
         return self.api_request(method='POST', path='playlists',
                                 params=params,
                                 post_data=post_data,
@@ -519,8 +537,10 @@ class YouTubeDataClient(YouTubeLoginClient):
         :param rating: [like|dislike|none]
         :return:
         """
-        params = {'id': video_id,
-                  'rating': rating}
+        params = {
+            'id': video_id,
+            'rating': rating,
+        }
         return self.api_request(method='POST', path='videos/rate',
                                 params=params,
                                 do_auth=True,
@@ -553,12 +573,20 @@ class YouTubeDataClient(YouTubeLoginClient):
     def add_video_to_playlist(self, playlist_id, video_id, **kwargs):
         playlist_id_upper = playlist_id.upper()
         if playlist_id_upper not in self._VIRTUAL_LISTS:
-            params = {'part': 'snippet',
-                      'mine': True}
-            post_data = {'kind': 'youtube#playlistItem',
-                         'snippet': {'playlistId': playlist_id,
-                                     'resourceId': {'kind': 'youtube#video',
-                                                    'videoId': video_id}}}
+            params = {
+                'part': 'snippet',
+                'mine': True,
+            }
+            post_data = {
+                'kind': 'youtube#playlistItem',
+                'snippet': {
+                    'playlistId': playlist_id,
+                    'resourceId': {
+                        'kind': 'youtube#video',
+                        'videoId': video_id,
+                    },
+                },
+            }
             return self.api_request(method='POST', path='playlistItems',
                                     params=params,
                                     post_data=post_data,
@@ -584,7 +612,6 @@ class YouTubeDataClient(YouTubeLoginClient):
                                 do_auth=True,
                                 **kwargs)
 
-    # noinspection PyUnusedLocal
     def remove_video_from_playlist(self,
                                    playlist_id,
                                    playlist_item_id,
@@ -592,7 +619,9 @@ class YouTubeDataClient(YouTubeLoginClient):
                                    **kwargs):
         playlist_id_upper = playlist_id.upper() if playlist_id else ''
         if playlist_id_upper not in self._VIRTUAL_LISTS:
-            params = {'id': playlist_item_id}
+            params = {
+                'id': playlist_item_id,
+            }
             return self.api_request(method='DELETE', path='playlistItems',
                                     params=params,
                                     do_auth=True,
@@ -768,7 +797,7 @@ class YouTubeDataClient(YouTubeLoginClient):
                     video_ids.append(video_id)
 
         remaining_items = num_items - len(video_ids)
-        local_history = self._context.get_settings().use_local_history()
+        local_history = self._context.settings().use_local_history()
         if local_history and remaining_items:
             history = self._context.get_playback_history()
             history_items = history.get_items(limit=remaining_items,
@@ -1343,7 +1372,7 @@ class YouTubeDataClient(YouTubeLoginClient):
                 if max_results is None else
                 max_results
             ),
-            'maxHeight': self._context.get_settings().max_video_height(),
+            'maxHeight': self._context.settings().max_video_height(),
         }
         return self.api_request(method='GET', path='videos',
                                 params=params,
@@ -1646,7 +1675,7 @@ class YouTubeDataClient(YouTubeLoginClient):
                   'maxResults': self.max_results()}
 
         if location:
-            settings = self._context.get_settings()
+            settings = self._context.settings()
             location = settings.get_location()
             if location:
                 params['location'] = location
@@ -1657,7 +1686,7 @@ class YouTubeDataClient(YouTubeLoginClient):
 
         if after:
             if isinstance(after, string_type) and after.startswith('{'):
-                after = json.loads(after)
+                after = json_loads(after)
             params['publishedAfter'] = (
                 yt_datetime_offset(**after)
                 if isinstance(after, dict) else
@@ -1705,66 +1734,83 @@ class YouTubeDataClient(YouTubeLoginClient):
         if not result:
             return None
 
-        related_videos = self.json_traverse(result, path=(
-            (
-                'onResponseReceivedEndpoints',
-                0,
-                'appendContinuationItemsAction',
-                'continuationItems',
-            ) if page_token else (
-                'contents',
-                'singleColumnWatchNextResults',
-                'pivot',
-                'pivot',
-                'contents',
-                slice(0, None, None),
-                'pivotShelfRenderer',
-                'content',
-                'pivotHorizontalListRenderer',
-                'items',
-            ) if retry == 1 else (
-               'contents',
-               'singleColumnWatchNextResults',
-               'results',
-               'results',
-               'contents',
-               2,
-               'shelfRenderer',
-               'content',
-               ('horizontalListRenderer', 'verticalListRenderer'),
-               'items',
-            ) if retry == 2 else (
-                'contents',
-                'twoColumnWatchNextResults',
-                'secondaryResults',
-                'secondaryResults',
-                'results',
-            )
-        ) + (
-            slice(None),
-            (
-                'pivotVideoRenderer',
-                # 'videoId',
-            ) if retry == 1 else (
-                'compactVideoRenderer',
-                # 'videoId',
-            ) if retry == 2 else (
+        related_videos = self.json_traverse(
+            result,
+            path=(
                 (
-                    'lockupViewModel',
-                    # 'contentId',
+                    (
+                        'onResponseReceivedEndpoints',
+                        0,
+                        'appendContinuationItemsAction',
+                        'continuationItems',
+                    )
+                    if page_token else
+                    (
+                        'contents',
+                        'singleColumnWatchNextResults',
+                        'pivot',
+                        'pivot',
+                        'contents',
+                        slice(0, None, None),
+                        'pivotShelfRenderer',
+                        'content',
+                        'pivotHorizontalListRenderer',
+                        'items',
+                    )
+                    if retry == 1 else
+                    (
+                        'contents',
+                        'singleColumnWatchNextResults',
+                        'results',
+                        'results',
+                        'contents',
+                        2,
+                        'shelfRenderer',
+                        'content',
+                        ('horizontalListRenderer', 'verticalListRenderer'),
+                        'items',
+                    )
+                    if retry == 2 else
+                    (
+                        'contents',
+                        'twoColumnWatchNextResults',
+                        'secondaryResults',
+                        'secondaryResults',
+                        'results',
+                    )
                 ),
+                slice(None),
                 (
-                    'compactVideoRenderer',
-                    # 'videoId',
-                ),
-                (
-                    'continuationItemRenderer',
-                    'continuationEndpoint',
-                    # 'continuationCommand',
-                    # 'token',
+                    (
+                        'pivotVideoRenderer',
+                        # 'videoId',
+                    )
+                    if retry == 1 else
+                    (
+                        'compactVideoRenderer',
+                        # 'videoId',
+                    )
+                    if retry == 2 else
+                    (
+                        (
+                            'lockupViewModel',
+                            # 'contentId',
+                        ),
+                        (
+                            'compactVideoRenderer',
+                            # 'videoId',
+                        ),
+                        (
+                            'continuationItemRenderer',
+                            'continuationEndpoint',
+                            # 'continuationCommand',
+                            # 'token',
+                        ),
+                    )
                 ),
             ),
-        ), default=())
+            default=(),
+        )
         if not related_videos or not any(related_videos):
             return {} if retry > 1 else self.get_related_videos(
                 video_id,
@@ -2142,7 +2188,7 @@ class YouTubeDataClient(YouTubeLoginClient):
             params['pageToken'] = page_token
 
         if location:
-            settings = self._context.get_settings()
+            settings = self._context.settings()
             location = settings.get_location()
             if location:
                 params['location'] = location
@@ -2171,7 +2217,7 @@ class YouTubeDataClient(YouTubeLoginClient):
                                'videoType',
                            },
                            **kwargs):
-        settings = self._context.get_settings()
+        settings = self._context.settings()
 
         # prepare default params
         search_params = {
@@ -2222,7 +2268,7 @@ class YouTubeDataClient(YouTubeLoginClient):
         published = params.get('publishedBefore')
         if published:
             if isinstance(published, string_type) and published.startswith('{'):
-                published = json.loads(published)
+                published = json_loads(published)
             search_params['publishedBefore'] = (
                 yt_datetime_offset(**published)
                 if isinstance(published, dict) else
@@ -2232,7 +2278,7 @@ class YouTubeDataClient(YouTubeLoginClient):
         published = params.get('publishedAfter')
         if published:
             if isinstance(published, string_type) and published.startswith('{'):
-                published = json.loads(published)
+                published = json_loads(published)
             search_params['publishedAfter'] = (
                 yt_datetime_offset(**published)
                 if isinstance(published, dict) else
@@ -2283,7 +2329,7 @@ class YouTubeDataClient(YouTubeLoginClient):
         context = self._context
         feed_history = context.get_feed_history()
         function_cache = context.get_function_cache()
-        settings = context.get_settings()
+        settings = context.settings()
 
         if do_filter:
             _, filters_set, custom_filters = channel_filter_split(

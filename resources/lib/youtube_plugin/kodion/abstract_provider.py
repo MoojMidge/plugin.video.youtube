@@ -18,10 +18,13 @@ from re import (
 from . import logging
 from .compatibility import string_type
 from .constants import (
+    CATEGORY_LABEL,
     CHECK_SETTINGS,
     CONTENT,
     FOLDER_URI,
     ITEMS_PER_PAGE,
+    PAGE,
+    PAGE_TOKEN,
     PATHS,
     REROUTE_PATH,
     WINDOW_CACHE,
@@ -163,7 +166,7 @@ class AbstractProvider(object):
                     else:
                         step += 1
         finally:
-            settings = context.get_settings(refresh=True)
+            settings = context.settings(refresh=True)
             settings.setup_wizard_enabled(False)
             settings_state['state'] = 'process'
             context.ipc_exec(CHECK_SETTINGS, timeout=5, payload=settings_state)
@@ -185,7 +188,7 @@ class AbstractProvider(object):
             if not re_match:
                 continue
 
-            exec_limit = context.get_settings().exec_limit()
+            exec_limit = context.settings().exec_limit()
             if exec_limit:
                 handler = ExecTimeout(
                     seconds=exec_limit,
@@ -254,7 +257,7 @@ class AbstractProvider(object):
 
         path = re_match.group('path')
         params = context.get_params()
-        if 'page_token' in params:
+        if PAGE_TOKEN in params:
             page_token = NextPageItem.create_page_token(
                 page, params.get(ITEMS_PER_PAGE, 50)
             )
@@ -263,7 +266,11 @@ class AbstractProvider(object):
         for param in NextPageItem.JUMP_PAGE_PARAM_EXCLUSIONS:
             if param in params:
                 del params[param]
-        params = dict(params, page=page, page_token=page_token)
+        params = dict(params,
+                      **{
+                          PAGE: page,
+                          PAGE_TOKEN: page_token,
+                      })
 
         if (not ui.busy_dialog_active()
                 and ui.get_container_info(FOLDER_URI)):
@@ -509,7 +516,7 @@ class AbstractProvider(object):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.LIST_CONTENT,
                 'sub_type': None,
-                'category_label': localize('search'),
+                CATEGORY_LABEL: localize('search'),
             },
         }
 

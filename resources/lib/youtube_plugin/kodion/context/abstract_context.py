@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import os
+from os.path import join as os_path_join
 
 from .. import logging
 from ..compatibility import (
@@ -26,6 +26,7 @@ from ..constants import (
     ACTION,
     ADDON_ID_PARAM,
     BOOL_FROM_STR,
+    CATEGORY_LABEL,
     CHANNEL_ID,
     CHANNEL_IDS,
     CLIP,
@@ -45,10 +46,12 @@ from ..constants import (
     INCOGNITO,
     ITEMS_PER_PAGE,
     ITEM_FILTER,
+    ITEM_NAME,
     KEYMAP,
     LIVE,
     ORDER,
     PAGE,
+    PAGE_TOKEN,
     PATHS,
     PLAYLIST_ID,
     PLAYLIST_IDS,
@@ -59,6 +62,7 @@ from ..constants import (
     PLAY_STRM,
     PLAY_TIMESHIFT,
     PLAY_USING,
+    RELOAD_PATH,
     SCREENSAVER,
     SEEK,
     START,
@@ -114,7 +118,6 @@ class AbstractContext(object):
         HIDE_VIDEOS,
         INCOGNITO,
         'location',
-        'logged_in',
         'resume',
         SCREENSAVER,
         WINDOW_CACHE,
@@ -151,7 +154,7 @@ class AbstractContext(object):
         'api_key',
         ACTION,
         ADDON_ID_PARAM,
-        'category_label',
+        CATEGORY_LABEL,
         CHANNEL_ID,
         'client_id',
         'client_secret',
@@ -159,16 +162,16 @@ class AbstractContext(object):
         'event_type',
         'item',
         'item_id',
-        'item_name',
+        ITEM_NAME,
         ORDER,
-        'page_token',
+        PAGE_TOKEN,
         'parent_id',
         'playlist',  # deprecated
         PLAYLIST_ITEM_ID,
         PLAYLIST_ID,
         'q',
         'rating',
-        'reload_path',
+        RELOAD_PATH,
         'search_type',
         SUBSCRIPTION_ID,
         'uri',
@@ -177,8 +180,7 @@ class AbstractContext(object):
         'visitor',
     ))
     _STRING_BOOL_PARAMS = frozenset((
-        'logged_in',
-        'reload_path',
+        RELOAD_PATH,
     ))
     _STRING_INT_PARAMS = frozenset((
     ))
@@ -263,7 +265,7 @@ class AbstractContext(object):
             filepath = (self.get_data_path(), uuid, 'data_cache.sqlite')
             data_cache = DataCache(
                 filepath,
-                max_file_size_mb=self.get_settings().cache_size() / 2,
+                max_file_size_mb=self.settings().cache_size() / 2,
             )
             self._data_cache = data_cache
         return data_cache
@@ -275,7 +277,7 @@ class AbstractContext(object):
             filepath = (self.get_data_path(), uuid, 'cache.sqlite')
             function_cache = FunctionCache(
                 filepath,
-                max_file_size_mb=self.get_settings().cache_size() / 2,
+                max_file_size_mb=self.settings().cache_size() / 2,
             )
             self._function_cache = function_cache
         return function_cache
@@ -287,7 +289,7 @@ class AbstractContext(object):
             filepath = (self.get_data_path(), uuid, 'requests_cache.sqlite')
             requests_cache = RequestCache(
                 filepath,
-                max_file_size_mb=self.get_settings().requests_cache_size(),
+                max_file_size_mb=self.settings().requests_cache_size(),
             )
             self._requests_cache = requests_cache
         return requests_cache
@@ -299,7 +301,7 @@ class AbstractContext(object):
             filepath = (self.get_data_path(), uuid, 'search.sqlite')
             search_history = SearchHistory(
                 filepath,
-                max_item_count=self.get_settings().get_search_history_size(),
+                max_item_count=self.settings().get_search_history_size(),
             )
             self._search_history = search_history
         return search_history
@@ -347,7 +349,7 @@ class AbstractContext(object):
     def reload_api_store(self):
         raise NotImplementedError()
 
-    def get_playlist_player(self, playlist_type=None):
+    def playlist_player(self, playlist_type=None):
         raise NotImplementedError()
 
     def get_ui(self):
@@ -474,7 +476,6 @@ class AbstractContext(object):
 
     @staticmethod
     def create_path(*args, **kwargs):
-        include_parts = kwargs.get('parts')
         parser = kwargs.get('parser')
         parts = [
             parser(part[6:-1])
@@ -488,6 +489,9 @@ class AbstractContext(object):
         ]
         if parts:
             path = '/'.join(parts).join(('/', '/'))
+            if kwargs.get('is_uri'):
+                path = quote(path)
+
             if path.startswith(PATHS.ROUTE):
                 parts = parts[2:]
             elif path.startswith(PATHS.COMMAND):
@@ -502,11 +506,11 @@ class AbstractContext(object):
                     else:
                         parts = parts[1:]
         else:
-            return ('/', parts) if include_parts else '/'
+            path = '/'
 
-        if kwargs.get('is_uri'):
-            path = quote(path)
-        return (path, parts) if include_parts else path
+        if kwargs.get('parts'):
+            return path, parts
+        return path
 
     def get_path(self):
         return self._path
@@ -684,7 +688,7 @@ class AbstractContext(object):
         path_comps = []
         for arg in args:
             path_comps.extend(arg.split('/'))
-        path = os.path.join(self.get_addon_path(), 'resources', *path_comps)
+        path = os_path_join(self.get_addon_path(), 'resources', *path_comps)
         return path
 
     def get_uri(self):
@@ -705,7 +709,7 @@ class AbstractContext(object):
     def get_handle(self):
         return self._plugin_handle
 
-    def get_settings(self, refresh=False):
+    def settings(self, refresh=False):
         raise NotImplementedError()
 
     def localize(self, text_id, args=None, default_text=None):
@@ -723,8 +727,8 @@ class AbstractContext(object):
     def clone(self, new_path=None, new_params=None):
         raise NotImplementedError()
 
-    def execute(self,
-                command,
+    @staticmethod
+    def execute(command,
                 wait=False,
                 wait_for=None,
                 wait_for_set=True,
@@ -735,10 +739,15 @@ class AbstractContext(object):
     def sleep(timeout=None):
         raise NotImplementedError()
 
+    @staticmethod
+    def abort_requested():
+        raise NotImplementedError()
+
     def tear_down(self):
         pass
 
-    def ipc_exec(self,
+    @classmethod
+    def ipc_exec(cls,
                  target,
                  timeout=None,
                  payload=None,
@@ -746,7 +755,7 @@ class AbstractContext(object):
                  stacklevel=2):
         raise NotImplementedError()
 
-    def is_plugin_folder(self, folder_name=None):
+    def is_plugin_folder(self, folder_path='', name=False, partial=True):
         raise NotImplementedError()
 
     def refresh_requested(self, force=False, on=False, off=False, params=None):

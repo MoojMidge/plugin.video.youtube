@@ -433,7 +433,7 @@ def playback_item(context, media_item, show_fanart=None, **_kwargs):
                   uri=uri)
 
     params = context.get_params()
-    settings = context.get_settings()
+    settings = context.settings()
     ui = context.get_ui()
 
     is_external = ui.get_property(PLAY_USING)
@@ -624,7 +624,7 @@ def directory_listitem(context, directory_item, show_fanart=None, **_kwargs):
     list_item = xbmcgui.ListItem(**kwargs)
 
     if show_fanart is None:
-        show_fanart = context.get_settings().fanart_selection()
+        show_fanart = context.settings().fanart_selection()
     image = directory_item.get_image()
     art = {'icon': image}
     if image:
@@ -660,7 +660,7 @@ def image_listitem(context, image_item, show_fanart=None, **_kwargs):
     list_item = xbmcgui.ListItem(**kwargs)
 
     if show_fanart is None:
-        show_fanart = context.get_settings().fanart_selection()
+        show_fanart = context.settings().fanart_selection()
     image = image_item.get_image()
     art = {'icon': image}
     if image:
@@ -772,7 +772,7 @@ def media_listitem(context,
     list_item = xbmcgui.ListItem(**kwargs)
 
     if show_fanart is None:
-        show_fanart = context.get_settings().fanart_selection()
+        show_fanart = context.settings().fanart_selection()
     image = media_item.get_image()
     art = {'icon': image}
     if image:

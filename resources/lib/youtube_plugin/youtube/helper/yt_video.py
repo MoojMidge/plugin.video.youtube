@@ -25,6 +25,10 @@ def _process_rate_video(provider,
     ui = context.get_ui()
     li_path = ui.get_listitem_info(URI)
 
+    client = provider.get_client(context)
+    if not client.logged_in:
+        raise KodionException('Video/Rate: not logged in')
+
     localize = context.localize
 
     if new_rating is None:
@@ -46,7 +50,7 @@ def _process_rate_video(provider,
     if not video_id and li_path:
         video_id = context.parse_item_ids(li_path).get(VIDEO_ID)
     if not video_id:
-        raise KodionException('video/rate/: missing video_id')
+        raise KodionException('Video/Rate: missing video_id')
 
     if current_rating is None:
         try:
@@ -54,7 +58,6 @@ def _process_rate_video(provider,
         except IndexError:
             current_rating = None
     if not current_rating:
-        client = provider.get_client(context)
         json_data = client.get_video_rating(video_id)
         if not json_data:
             return False, {provider.FALLBACK: False}
@@ -77,7 +80,7 @@ def _process_rate_video(provider,
     notify_message = None
     response = None
     if result != -1:
-        response = provider.get_client(context).rate_video(video_id, result)
+        response = client.rate_video(video_id, result)
         if response:
             if result == 'none':
                 notify_message = localize(('removed.x', 'rating'))
@@ -109,7 +112,7 @@ def _process_more_for_video(provider, context):
 
     video_id = params.get(VIDEO_ID)
     if not video_id:
-        raise KodionException('video/more/: missing video_id')
+        raise KodionException('Video/More: missing video_id')
 
     item_name = params.get('item_name')
 
@@ -119,7 +122,7 @@ def _process_more_for_video(provider, context):
         menu_items.video_comments(context, video_id, item_name),
         menu_items.video_description_links(context, video_id, item_name),
         menu_items.video_rate(context, video_id),
-    ] if params.get('logged_in') else [
+    ] if provider.get_client(context).logged_in else [
         menu_items.video_related(context, video_id, item_name),
         menu_items.video_comments(context, video_id, item_name),
         menu_items.video_description_links(context, video_id, item_name),

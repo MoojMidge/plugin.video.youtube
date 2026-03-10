@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from datetime import date, datetime, time as dt_time, timedelta
 from importlib import import_module
 from re import compile as re_compile
-from sys import modules
+from sys import modules as sys_modules
 from time import gmtime, strftime
 
 from ..compatibility import xbmc
@@ -299,11 +299,11 @@ def datetime_to_since(dt, context=None, local=True, as_seconds=False):
 
 # Python strptime bug workaround
 # https://github.com/python/cpython/issues/71587
-if '_strptime' not in modules:
-    modules['_strptime'] = import_module('_strptime')
+if '_strptime' not in sys_modules:
+    sys_modules['_strptime'] = import_module('_strptime')
 
 
-def strptime(datetime_str, fmt=None, _strptime=modules['_strptime']):
+def strptime(datetime_str, fmt=None, _strptime=sys_modules['_strptime']):
     if fmt is None:
         fmt = '%Y-%m-%d%H%M%S'
 

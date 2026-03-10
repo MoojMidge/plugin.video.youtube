@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import sys
+import pstats
 import threading
 import time
 from atexit import register as atexit_register
@@ -18,9 +18,9 @@ from cProfile import Profile
 from functools import wraps
 from inspect import getargvalues
 from os.path import normpath
-import pstats
+from sys import settrace as sys_settrace
 from traceback import extract_stack, format_list
-from weakref import ref
+from weakref import ref as weakref_ref
 
 from . import logging
 from .compatibility import StringIO
@@ -47,7 +47,7 @@ def debug_here(host='localhost'):
     pydevd.settrace(host, stdoutToServer=True, stderrToServer=True)
 
 
-class ProfilerProxy(ref):
+class ProfilerProxy(weakref_ref):
     def __call__(self, *args, **kwargs):
         return super(ProfilerProxy, self).__call__().__call__(
             *args, **kwargs
@@ -361,7 +361,7 @@ class ExecTimeout(object):
 
             if self._trace_threads:
                 threading.settrace(self.timeout_trace)
-            sys.settrace(self.timeout_trace)
+            sys_settrace(self.timeout_trace)
             timer.start()
             try:
                 return function(*args, **kwargs)
@@ -369,7 +369,7 @@ class ExecTimeout(object):
                 timer.cancel()
                 if self._trace_threads:
                     threading.settrace(None)
-                sys.settrace(None)
+                sys_settrace(None)
                 if self._callback:
                     self._callback()
                 self._last_event = (None, None, None)

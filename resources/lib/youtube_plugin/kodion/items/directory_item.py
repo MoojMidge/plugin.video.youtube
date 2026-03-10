@@ -11,6 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from .base_item import BaseItem
+from ..constants import CATEGORY_LABEL
 from ..compatibility import parse_qsl, unescape, urlencode, urlsplit
 
 
@@ -69,9 +70,9 @@ class DirectoryItem(BaseItem):
             uri = urlsplit(self.get_uri())
             params = dict(parse_qsl(uri.query))
             if label:
-                params['category_label'] = label
+                params[CATEGORY_LABEL] = label
             else:
-                del params['category_label']
+                del params[CATEGORY_LABEL]
             self.set_uri(uri._replace(query=urlencode(params)).geturl())
 
         self._category_label = label

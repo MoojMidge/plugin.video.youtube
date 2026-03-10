@@ -136,7 +136,7 @@ def sign_out(addon_id):
 def reset_access_tokens(addon_id):
     """
 
-    :param addon_id: id of the add-on having it's access tokens reset
+    :param addon_id: id of the add-on having its access tokens reset
     :return:
     """
     if not addon_id or addon_id == ADDON_ID:

@@ -9,9 +9,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import sys
+from sys import argv
 
 from youtube_plugin.kodion import script_actions
 
 
-script_actions.run(sys.argv)
+script_actions.run(argv)
