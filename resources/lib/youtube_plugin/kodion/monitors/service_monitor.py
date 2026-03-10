@@ -9,8 +9,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import json
 from io import open
+from json import loads as json_loads
 from threading import Event, Lock, Thread
 from xml.etree.ElementTree import XMLParser as ET_XMLParser
 
@@ -91,12 +91,12 @@ class ServiceMonitor(xbmc.Monitor):
 
     @staticmethod
     def send_notification(method,
-                          data=True,
+                          data=None,
                           sender='.'.join((ADDON_ID, 'service'))):
         jsonrpc(method='JSONRPC.NotifyAll',
                 params={'sender': sender,
                         'message': method,
-                        'data': data})
+                        'data': data or True})
 
     def refresh_container(self, force=False):
         if force:
@@ -147,9 +147,9 @@ class ServiceMonitor(xbmc.Monitor):
             elif method == 'Playlist.OnAdd':
                 context = self._context
 
-                data = json.loads(data)
+                data = json_loads(data)
                 position = data.get('position', 0)
-                playlist_player = context.get_playlist_player()
+                playlist_player = context.playlist_player()
                 item_uri = playlist_player.get_item_path(position)
 
                 if context.is_plugin_path(item_uri):
@@ -177,11 +177,14 @@ class ServiceMonitor(xbmc.Monitor):
             return
 
         group, separator, event = method.partition('.')
+        if event:
+            if data:
+                data = json_loads(data)
+        else:
+            event = group
 
         if event == SERVICE_IPC:
-            if not isinstance(data, dict):
-                data = json.loads(data)
-            if not data:
+            if not data or not isinstance(data, dict):
                 return
 
             target = data.get('target')
@@ -319,13 +322,13 @@ class ServiceMonitor(xbmc.Monitor):
             self.refresh_container()
 
         elif event == CONTAINER_FOCUS:
-            if data:
-                data = json.loads(data)
-            if data:
-                self._context.get_ui().focus_container(
-                    container_id=data.get(CONTAINER_ID),
-                    position=data.get(CONTAINER_POSITION),
-                )
+            if not data or not isinstance(data, dict):
+                return
+
+            self._context.get_ui().focus_container(
+                container_id=data.get(CONTAINER_ID),
+                position=data.get(CONTAINER_POSITION),
+            )
 
         elif event == RELOAD_ACCESS_MANAGER:
             self._context.reload_access_manager()
@@ -335,9 +338,7 @@ class ServiceMonitor(xbmc.Monitor):
             self.onSettingsChanged(force=True)
 
         elif event == PLAYBACK_STOPPED:
-            if data:
-                data = json.loads(data)
-            if not data:
+            if not data or not isinstance(data, dict):
                 return
 
             if data.get('play_data', {}).get('play_count'):
@@ -347,8 +348,7 @@ class ServiceMonitor(xbmc.Monitor):
                 )
 
         elif event == SYNC_LISTITEM:
-            video_ids = json.loads(data) if data else None
-            if not video_ids:
+            if not data or not isinstance(data, (list, tuple)):
                 return
 
             context = self._context
@@ -358,7 +358,7 @@ class ServiceMonitor(xbmc.Monitor):
                 return
 
             playback_history = context.get_playback_history()
-            for video_id in video_ids:
+            for video_id in data:
                 if not video_id or video_id != focused_video_id:
                     continue
 
@@ -409,7 +409,7 @@ class ServiceMonitor(xbmc.Monitor):
             self.log.debug('onSettingsChanged: %d change(s)', total)
             self._settings_changes = 0
 
-        settings = context.get_settings(refresh=True)
+        settings = context.settings(refresh=True)
         log_level = settings.log_level()
         if log_level:
             self.log.debugging = True
@@ -484,20 +484,21 @@ class ServiceMonitor(xbmc.Monitor):
                        ip=self._httpd_address,
                        port=self._httpd_port)
         self.httpd_address_sync()
-        self.httpd = get_http_server(address=self._httpd_address,
-                                     port=self._httpd_port,
-                                     context=context)
-        if not self.httpd:
+        httpd = get_http_server(address=self._httpd_address,
+                                port=self._httpd_port,
+                                context=context)
+        if httpd:
+            self.httpd = httpd
+        else:
             self._httpd_error = True
             return False
 
-        self.httpd_thread = Thread(target=self.httpd.serve_forever)
+        self.httpd_thread = Thread(target=httpd.serve_forever)
         self.httpd_thread.daemon = True
         self.httpd_thread.start()
 
-        address = self.httpd.socket.getsockname()
         self.log.debug('HTTPServer: Listening on {address[0]}:{address[1]}',
-                       address=address)
+                       address=httpd.socket.getsockname())
         self._httpd_error = False
         return True
 
@@ -553,7 +554,7 @@ class ServiceMonitor(xbmc.Monitor):
             required = None
 
         elif on_idle:
-            settings = self._context.get_settings()
+            settings = self._context.settings()
 
             playing = player.isPlaying() if player else False
             external = player.isExternalPlayer() if playing else False

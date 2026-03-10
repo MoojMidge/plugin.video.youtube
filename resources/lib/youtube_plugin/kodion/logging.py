@@ -11,11 +11,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import logging
-import sys
 from os.path import normpath
 from pprint import PrettyPrinter
 from string import Formatter
-from sys import exc_info as sys_exc_info
+from sys import exc_info as sys_exc_info, modules as sys_modules
 from traceback import extract_stack, format_list
 
 from .compatibility import StringIO, string_type, to_str, to_unicode, xbmc
@@ -655,7 +654,7 @@ def check_frame(frame, stacklevel=None, skip_paths=None):
     return stacklevel, is_internal
 
 
-__original_module__ = sys.modules[__name__]
+__original_module__ = sys_modules[__name__]
 
 
 class ModuleProperties(__original_module__.__class__, object):
@@ -671,4 +670,4 @@ class ModuleProperties(__original_module__.__class__, object):
         )
 
 
-sys.modules[__name__] = ModuleProperties(__name__, __doc__)
+sys_modules[__name__] = ModuleProperties(__name__, __doc__)

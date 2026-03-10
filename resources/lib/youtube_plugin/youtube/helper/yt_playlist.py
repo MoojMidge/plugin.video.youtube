@@ -17,9 +17,11 @@ from ...kodion.constants import (
     CONTEXT_MENU,
     KEYMAP,
     FOLDER_URI,
+    ITEM_NAME,
     PATHS,
     PLAYLIST_ID,
     PLAYLIST_ITEM_ID,
+    RELOAD_PATH,
     TITLE,
     URI,
     VIDEO_ID,
@@ -108,7 +110,7 @@ def _process_remove_video(provider,
     if video_id is None:
         video_id = params.pop(VIDEO_ID, li_video_id)
     if video_name is None:
-        video_name = params.pop('item_name', li_video_name)
+        video_name = params.pop(ITEM_NAME, li_video_name)
     if confirmed is None:
         confirmed = params.pop('confirmed', False)
 
@@ -156,7 +158,7 @@ def _process_remove_video(provider,
             if 'refresh' not in params:
                 params['refresh'] = True
         else:
-            path = params.pop('reload_path', False if confirmed else None)
+            path = params.pop(RELOAD_PATH, False if confirmed else None)
 
         if path is not False:
             provider.reroute(
@@ -181,7 +183,7 @@ def _process_remove_playlist(provider, context):
     if not playlist_id:
         raise KodionException('Playlist/Remove: missing playlist_id')
 
-    playlist_name = params.get('item_name', li_playlist_name)
+    playlist_name = params.get(ITEM_NAME, li_playlist_name)
     if not playlist_name:
         raise KodionException('Playlist/Remove: missing item_name')
 
@@ -245,7 +247,7 @@ def _process_select_playlist(provider, context):
 
     account_playlists = {watch_later_id, watch_history_id}
 
-    thumb_size = context.get_settings().get_thumbnail_size()
+    thumb_size = context.settings().get_thumbnail_size()
     default_thumb = context.create_resource_path('media', 'playlist.png')
 
     while 1:
@@ -348,7 +350,7 @@ def _process_rename_playlist(provider, context):
 
     result, text = ui.on_keyboard_input(
         localize('rename'),
-        default=params.get('item_name', li_playlist_name),
+        default=params.get(ITEM_NAME, li_playlist_name),
     )
     if not result or not text:
         return False, None
@@ -385,7 +387,7 @@ def _playlist_id_change(context, playlist, command):
         raise KodionException('{type}/{command}: missing playlist_id'
                               .format(type=playlist, command=command))
 
-    playlist_name = context.get_param('item_name', li_playlist_name)
+    playlist_name = context.get_param(ITEM_NAME, li_playlist_name)
     if not playlist_name:
         raise KodionException('{type}/{command}: missing item_name'
                               .format(type=playlist, command=command))
@@ -422,7 +424,7 @@ def _process_rate_playlist(provider,
     if playlist_id is None:
         playlist_id = params.pop(PLAYLIST_ID, li_playlist_id)
     if playlist_name is None:
-        playlist_name = params.pop('item_name', li_playlist_name)
+        playlist_name = params.pop(ITEM_NAME, li_playlist_name)
     if confirmed is None:
         confirmed = rating == 'like' or params.pop('confirmed', False)
 
@@ -461,7 +463,7 @@ def _process_rate_playlist(provider,
             if 'refresh' not in params:
                 params['refresh'] = True
         else:
-            path = params.pop('reload_path', False if confirmed else None)
+            path = params.pop(RELOAD_PATH, False if confirmed else None)
 
         if path is not False:
             provider.reroute(

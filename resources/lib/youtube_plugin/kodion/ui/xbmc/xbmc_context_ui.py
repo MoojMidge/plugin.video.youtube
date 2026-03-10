@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from weakref import proxy
+from weakref import proxy as weakref_proxy
 
 from ..abstract_context_ui import AbstractContextUI
 from ... import logging
@@ -61,7 +61,7 @@ class XbmcContextUI(AbstractContextUI):
             message_template = '{_message} {_current}/{_total}'
 
         return XbmcProgressDialog(
-            ui=proxy(self),
+            ui=weakref_proxy(self),
             dialog=(xbmcgui.DialogProgressBG
                     if background else
                     xbmcgui.DialogProgress),
@@ -343,32 +343,23 @@ class XbmcContextUI(AbstractContextUI):
     def get_container_bool(cls,
                            name,
                            container_id=True,
-                           strict=True,
                            stacklevel=None,
                            _bool=xbmc.getCondVisibility,
                            _label=xbmc.getInfoLabel):
         if container_id is True:
             container_id = _label(PROPERTY % CONTAINER_ID)
-        elif container_id is None:
-            strict = False
         elif container_id is False:
             container_id = _label('System.CurrentControlID')
-            strict = False
 
         stacklevel = 2 if stacklevel is None else stacklevel + 1
 
         if container_id:
             out = _bool(PLUGIN_CONTAINER_INFO % (container_id, name))
             log_msg = 'Container {container_id} used for {name!r}: {out!r}'
-        elif strict:
-            out = False
-            log_msg = None
-            cls.log.warning('Plugin container not found for %r', name,
-                            stacklevel=stacklevel)
         else:
             out = _bool(CURRENT_CONTAINER_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if log_msg and cls.log.verbose_logging:
+        if cls.log.verbose_logging:
             cls.log.debug(log_msg,
                           container_id=container_id,
                           name=name,
@@ -385,26 +376,18 @@ class XbmcContextUI(AbstractContextUI):
                            _label=xbmc.getInfoLabel):
         if container_id is True:
             container_id = _label(PROPERTY % CONTAINER_ID)
-        elif container_id is None:
-            strict = False
         elif container_id is False:
             container_id = _label('System.CurrentControlID')
-            strict = False
 
         stacklevel = 2 if stacklevel is None else stacklevel + 1
 
         if container_id:
             out = _label(PLUGIN_CONTAINER_INFO % (container_id, name))
             log_msg = 'Container {container_id} used for {name!r}: {out!r}'
-        elif strict:
-            out = False
-            log_msg = None
-            cls.log.warning('Plugin container not found for %r', name,
-                            stacklevel=stacklevel)
         else:
             out = _label(CURRENT_CONTAINER_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if log_msg and cls.log.verbose_logging:
+        if cls.log.verbose_logging:
             cls.log.debug(log_msg,
                           container_id=container_id,
                           name=name,
@@ -416,32 +399,23 @@ class XbmcContextUI(AbstractContextUI):
     def get_listitem_bool(cls,
                           name,
                           container_id=True,
-                          strict=True,
                           stacklevel=None,
                           _bool=xbmc.getCondVisibility,
                           _label=xbmc.getInfoLabel):
         if container_id is True:
             container_id = _label(PROPERTY % CONTAINER_ID)
-        elif container_id is None:
-            strict = False
         elif container_id is False:
             container_id = _label('System.CurrentControlID')
-            strict = False
 
         stacklevel = 2 if stacklevel is None else stacklevel + 1
 
         if container_id:
             out = _bool(CONTAINER_LISTITEM_INFO % (container_id, name))
             log_msg = 'Container {container_id} used for {name!r}: {out!r}'
-        elif strict:
-            out = False
-            log_msg = None
-            cls.log.warning('Plugin container not found for %r', name,
-                            stacklevel=stacklevel)
         else:
             out = _bool(LISTITEM_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if log_msg and cls.log.verbose_logging:
+        if cls.log.verbose_logging:
             cls.log.debug(log_msg,
                           container_id=container_id,
                           name=name,
@@ -453,31 +427,22 @@ class XbmcContextUI(AbstractContextUI):
     def get_listitem_info(cls,
                           name,
                           container_id=True,
-                          strict=True,
                           stacklevel=None,
                           _label=xbmc.getInfoLabel):
         if container_id is True:
             container_id = _label(PROPERTY % CONTAINER_ID)
-        elif container_id is None:
-            strict = False
         elif container_id is False:
             container_id = _label('System.CurrentControlID')
-            strict = False
 
         stacklevel = 2 if stacklevel is None else stacklevel + 1
 
         if container_id:
             out = _label(CONTAINER_LISTITEM_INFO % (container_id, name))
             log_msg = 'Container {container_id} used for {name!r}: {out!r}'
-        elif strict:
-            out = ''
-            log_msg = None
-            cls.log.warning('Plugin container not found for %r', name,
-                            stacklevel=stacklevel)
         else:
             out = _label(LISTITEM_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if log_msg and cls.log.verbose_logging:
+        if cls.log.verbose_logging:
             cls.log.debug(log_msg,
                           container_id=container_id,
                           name=name,
@@ -489,31 +454,22 @@ class XbmcContextUI(AbstractContextUI):
     def get_listitem_property(cls,
                               name,
                               container_id=True,
-                              strict=True,
                               stacklevel=None,
                               _label=xbmc.getInfoLabel):
         if container_id is True:
             container_id = _label(PROPERTY % CONTAINER_ID)
-        elif container_id is None:
-            strict = False
         elif container_id is False:
             container_id = _label('System.CurrentControlID')
-            strict = False
 
         stacklevel = 2 if stacklevel is None else stacklevel + 1
 
         if container_id:
             out = _label(CONTAINER_LISTITEM_PROP % (container_id, name))
             log_msg = 'Container {container_id} used for {name!r}: {out!r}'
-        elif strict:
-            out = ''
-            log_msg = None
-            cls.log.warning('Plugin container not found for %r', name,
-                            stacklevel=stacklevel)
         else:
             out = _label(LISTITEM_PROP % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if log_msg and cls.log.verbose_logging:
+        if cls.log.verbose_logging:
             cls.log.debug(log_msg,
                           container_id=container_id,
                           name=name,

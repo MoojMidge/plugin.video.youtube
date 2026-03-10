@@ -10,11 +10,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import os
 import sqlite3
-import time
 from atexit import register as atexit_register
+from os import path as os_path
 from threading import RLock, Timer
+from time import sleep as time_sleep
 
 from .. import logging
 from ..compatibility import pickle, to_str
@@ -244,7 +244,7 @@ class Storage(object):
                  max_file_size_kb=-1,
                  migrate=False):
         self.uuid = filepath[1]
-        self._filepath = os.path.join(*filepath)
+        self._filepath = os_path.join(*filepath)
         self._db = None
         self._lock = StorageLock()
         self._memory_store = getattr(self.__class__, '_memory_store', None)
@@ -327,8 +327,8 @@ class Storage(object):
 
     def _open(self):
         table_queries = []
-        if not os.path.exists(self._filepath):
-            make_dirs(os.path.dirname(self._filepath))
+        if not os_path.exists(self._filepath):
+            make_dirs(os_path.dirname(self._filepath))
             table_queries.extend((
                 self._sql['create_table'],
             ))
@@ -365,7 +365,7 @@ class Storage(object):
                 )
             if abort:
                 break
-            time.sleep(0.1)
+            time_sleep(0.1)
         else:
             abort = True
         if abort:
@@ -529,7 +529,7 @@ class Storage(object):
                     )
                 if abort:
                     break
-                time.sleep(0.1)
+                time_sleep(0.1)
             else:
                 abort = True
             if abort:
@@ -549,7 +549,7 @@ class Storage(object):
             size_kb = result // 1024
         else:
             try:
-                size_kb = (os.path.getsize(self._filepath) // 1024)
+                size_kb = (os_path.getsize(self._filepath) // 1024)
             except OSError:
                 return False
 

@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import os
+from os.path import join as os_path_join
 
 from ...kodion.compatibility import to_unicode, urlencode, xbmcvfs
 from ...kodion.constants import ADDON_ID, DATA_PATH, WAIT_END_FLAG
@@ -22,7 +22,7 @@ from ...kodion.utils.datetime import since_epoch, strptime
 def process_pre_run(context):
     context.get_function_cache().clear()
 
-    settings = context.get_settings()
+    settings = context.settings()
     if not settings.subscriptions_sources(default=False, raw_values=True):
         settings.subscriptions_sources(
             settings.subscriptions_sources(raw_values=True)
@@ -49,7 +49,7 @@ def process_language(context, step, steps, **_kwargs):
             ),
             wait_for=WAIT_END_FLAG,
         )
-        context.get_settings(refresh=True)
+        context.settings(refresh=True)
     return step
 
 
@@ -73,13 +73,13 @@ def process_geo_location(context, step, steps, **_kwargs):
             ),
             wait_for=WAIT_END_FLAG,
         )
-        context.get_settings(refresh=True)
+        context.settings(refresh=True)
     return step
 
 
 def process_default_settings(context, step, steps, **_kwargs):
     localize = context.localize
-    settings = context.get_settings()
+    settings = context.settings()
     ui = context.get_ui()
 
     step += 1
@@ -142,7 +142,7 @@ def process_default_settings(context, step, steps, **_kwargs):
 
 def process_list_detail_settings(context, step, steps, **_kwargs):
     localize = context.localize
-    settings = context.get_settings()
+    settings = context.settings()
 
     step += 1
     if context.get_ui().on_yes_no_input(
@@ -165,7 +165,7 @@ def process_list_detail_settings(context, step, steps, **_kwargs):
 
 def process_performance_settings(context, step, steps, **_kwargs):
     localize = context.localize
-    settings = context.get_settings()
+    settings = context.settings()
     ui = context.get_ui()
 
     step += 1
@@ -265,7 +265,7 @@ def process_subtitles(context, step, steps, **_kwargs):
             ),
             wait_for=WAIT_END_FLAG,
         )
-        context.get_settings(refresh=True)
+        context.settings(refresh=True)
     return step
 
 
@@ -278,7 +278,7 @@ def process_old_search_db(context, step, steps, **_kwargs):
         'kodion',
         'search.sqlite'
     )
-    search_db_path_str = os.path.join(*search_db_path)
+    search_db_path_str = os_path_join(*search_db_path)
     step += 1
     if xbmcvfs.exists(search_db_path_str) and ui.on_yes_no_input(
             '{youtube} - {setup_wizard} ({step}/{steps})'.format(
@@ -328,7 +328,7 @@ def process_old_history_db(context, step, steps, **_kwargs):
         'playback',
         context.get_access_manager().get_current_user_id() + '.sqlite',
     )
-    history_db_path_str = os.path.join(*history_db_path)
+    history_db_path_str = os_path_join(*history_db_path)
     step += 1
     if xbmcvfs.exists(history_db_path_str) and ui.on_yes_no_input(
             '{youtube} - {setup_wizard} ({step}/{steps})'.format(
@@ -400,7 +400,7 @@ def process_refresh_settings(context, step, steps, **_kwargs):
 
 def process_migrate_watch_history(context, step, steps, **_kwargs):
     localize = context.localize
-    settings = context.get_settings()
+    settings = context.settings()
     access_manager = context.get_access_manager()
     watch_history_id = access_manager.get_watch_history_id().upper()
 

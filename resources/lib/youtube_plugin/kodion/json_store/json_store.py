@@ -9,10 +9,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import json
-import os
-import errno
+from errno import ENOENT
 from io import open
+from json import dumps as json_dumps, loads as json_loads
+from os.path import join as os_path_join
 
 from .. import logging
 from ..compatibility import to_unicode
@@ -31,7 +31,7 @@ class JSONStore(object):
     def __init__(self, filename, context):
         self._filename = filename
         if self.BASE_PATH:
-            self.filepath = os.path.join(self.BASE_PATH, filename)
+            self.filepath = os_path_join(self.BASE_PATH, filename)
         else:
             self.log.error_trace(('Addon data directory not available',
                                   'Path: %s'),
@@ -59,9 +59,7 @@ class JSONStore(object):
             if not filepath:
                 raise IOError
 
-            self.log.debug(('Saving', 'File: %s'),
-                           filepath,
-                           stacklevel=stacklevel)
+            self.log.debug('Saving: %s', filepath, stacklevel=stacklevel)
 
             _data = self._data
             if loaded is False:
@@ -83,23 +81,19 @@ class JSONStore(object):
                 raise ValueError
 
             if data == _data:
-                self.log.debug(('Data unchanged', 'File: %s'),
-                               filepath,
-                               stacklevel=stacklevel)
+                self.log.debug('Unchanged: %s', filepath, stacklevel=stacklevel)
                 return None
 
-            _data = json.dumps(
+            _data = json_dumps(
                 data, ensure_ascii=False, indent=4, sort_keys=True
             )
-            self._data = json.loads(
+            self._data = json_loads(
                 _data,
                 object_pairs_hook=(self._process_data if process else None),
             )
 
             if loaded is False:
-                self.log.debug(('File write deferred', 'File: %s'),
-                               filepath,
-                               stacklevel=stacklevel)
+                self.log.debug('Deferred: %s', filepath, stacklevel=stacklevel)
                 return None
 
             if ipc:
@@ -117,7 +111,7 @@ class JSONStore(object):
                 if response is False:
                     raise IOError
                 if response is None:
-                    self.log.debug(('Data unchanged', 'File: %s'),
+                    self.log.debug('Unchanged: %s',
                                    filepath,
                                    stacklevel=stacklevel)
                     return None
@@ -145,9 +139,7 @@ class JSONStore(object):
             if not filepath:
                 raise IOError
 
-            self.log.debug(('Loading', 'File: %s'),
-                           filepath,
-                           stacklevel=stacklevel)
+            self.log.debug('Loading: %s', filepath, stacklevel=stacklevel)
 
             if ipc:
                 if self._context.ipc_exec(
@@ -167,7 +159,7 @@ class JSONStore(object):
                     data = file.read()
             if not data:
                 raise ValueError
-            self._data = json.loads(
+            self._data = json_loads(
                 data,
                 object_pairs_hook=(self._process_data if process else None),
             )
@@ -176,7 +168,7 @@ class JSONStore(object):
             self.log.exception(('Access error', 'File: %s'),
                                filepath or self._filename,
                                stacklevel=stacklevel)
-            if exc.errno == errno.ENOENT:
+            if exc.errno == ENOENT:
                 loaded = None
         except (TypeError, ValueError):
             self.log.exception(('Invalid data', 'Data: {data!r}'),
@@ -195,8 +187,8 @@ class JSONStore(object):
         try:
             if not data:
                 raise ValueError
-            return json.loads(
-                json.dumps(data, ensure_ascii=False),
+            return json_loads(
+                json_dumps(data, ensure_ascii=False),
                 object_pairs_hook=(self._process_data if process else None),
             )
         except (TypeError, ValueError) as exc:
@@ -212,7 +204,7 @@ class JSONStore(object):
 
     def load_data(self, data, process=True, stacklevel=2):
         try:
-            return json.loads(
+            return json_loads(
                 data,
                 object_pairs_hook=(self._process_data if process else None),
             )

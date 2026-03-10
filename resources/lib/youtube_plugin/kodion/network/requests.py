@@ -176,6 +176,7 @@ class HTTPAdapter(_HTTPAdapter):
                 retry.other = 0
         return super(HTTPAdapter, self).send(*args, **kwargs)
 
+
 class SSLHTTPAdapter(HTTPAdapter):
     _SSL_CONTEXT = create_urllib3_context()
     _CA_PATH = extract_zipped_paths(DEFAULT_CA_BUNDLE_PATH)
@@ -329,7 +330,7 @@ class BaseRequestsClass(object):
                         if context is None else
                         context)
         if cls._context:
-            settings = cls._context.get_settings()
+            settings = cls._context.settings()
             cls._verify = (settings.verify_ssl()
                            if verify_ssl is None else
                            verify_ssl)
@@ -488,14 +489,14 @@ class BaseRequestsClass(object):
                 etag, cached_response = cached_request['value']
                 if cached_response is not None:
                     if etag:
-                        # Etag is meant to be enclosed in double quotes, but the
+                        # ETag is meant to be enclosed in double quotes, but the
                         # Google servers don't seem to support this
                         headers['If-None-Match'] = '"{0}", {0}'.format(etag)
                     timestamp = imf_fixdate(cached_request['timestamp'])
                     headers['If-Modified-Since'] = timestamp
                     self.log.debug(('Cached response',
                                     'Request ID: {request_id}',
-                                    'Etag:       {etag}',
+                                    'ETag:       {etag}',
                                     'Modified:   {timestamp}'),
                                    request_id=request_id,
                                    etag=etag,
@@ -610,7 +611,7 @@ class BaseRequestsClass(object):
         elif cached_response is not None:
             self.log.debug(('Using cached response',
                             'Request ID: {request_id}',
-                            'Etag:       {etag}',
+                            'ETag:       {etag}',
                             'Modified:   {timestamp}'),
                            request_id=request_id,
                            etag=etag,
@@ -621,7 +622,7 @@ class BaseRequestsClass(object):
         elif response is not None:
             self.log.debug(('Saving response to cache',
                             'Request ID: {request_id}',
-                            'Etag:       {etag}',
+                            'ETag:       {etag}',
                             'Modified:   {timestamp}'),
                            request_id=request_id,
                            etag=etag,

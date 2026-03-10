@@ -32,7 +32,7 @@ class ResourceManager(object):
         self._incognito = params.get(INCOGNITO)
 
         fanart_type = params.get(FANART_TYPE)
-        settings = context.get_settings()
+        settings = context.settings()
         if fanart_type is None:
             fanart_type = settings.fanart_selection()
         self._channel_fanart = fanart_type == settings.FANART_CHANNEL
@@ -677,7 +677,7 @@ class ResourceManager(object):
                 if id_ in result
             }
 
-        if context.get_settings().use_local_history():
+        if context.settings().use_local_history():
             playback_history = context.get_playback_history()
             played_items = playback_history.get_items(ids)
             for video_id, play_data in played_items.items():

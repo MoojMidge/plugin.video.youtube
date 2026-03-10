@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import os
+from os.path import join as os_path_join
 
 from .request_client import YouTubeRequestClient
 from ...kodion import logging
@@ -80,7 +80,7 @@ class Subtitles(YouTubeRequestClient):
     }
 
     def __init__(self, context, video_id, use_mpd=None):
-        settings = context.get_settings()
+        settings = context.settings()
         super(Subtitles, self).__init__(
             context=context,
             language=settings.get_language(),
@@ -443,7 +443,7 @@ class Subtitles(YouTubeRequestClient):
                 self.log.error_trace('Unable to access temp directory')
                 return None, None
 
-            file_path = os.path.join(self.BASE_PATH, filename)
+            file_path = os_path_join(self.BASE_PATH, filename)
             if xbmcvfs.exists(file_path):
                 self.log.debug(('Use existing subtitle for: {lang!r}',
                                 'File: {file}'),

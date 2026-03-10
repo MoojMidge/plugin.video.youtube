@@ -39,7 +39,8 @@ _profiler = Profiler(enabled=False,
                      num_lines=20)
 
 
-def run(context=_context,
+def run(argv,
+        context=_context,
         log=_log,
         plugin=_plugin,
         provider=_provider,
@@ -48,9 +49,9 @@ def run(context=_context,
 
     if ui.pop_property(CHECK_SETTINGS):
         provider.reset_client(context=context)
-        settings = context.get_settings(refresh=True)
+        settings = context.settings(refresh=True)
     else:
-        settings = context.get_settings()
+        settings = context.settings()
 
     log_level = settings.log_level()
     if log_level:
@@ -74,7 +75,7 @@ def run(context=_context,
     old_path = context.get_path().rstrip('/')
     old_uri = ui.get_container_info(FOLDER_URI, container_id=None)
     old_handle = context.get_handle()
-    context.init()
+    context.init(argv)
     current_path = context.get_path().rstrip('/')
     current_params = context.get_original_params()
     current_handle = context.get_handle()

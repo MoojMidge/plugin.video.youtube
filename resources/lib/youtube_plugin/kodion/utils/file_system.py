@@ -10,8 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import os
-import shutil
+from os import makedirs as os_makedirs
+from shutil import rmtree as shutil_rmtree
 
 from .. import logging
 from ..compatibility import xbmcvfs
@@ -26,7 +26,7 @@ def make_dirs(path):
         return path
 
     try:
-        os.makedirs(path)
+        os_makedirs(path)
     except OSError:
         if not xbmcvfs.exists(path):
             logging.exception(('Failed', 'Path: %r'), path)
@@ -43,7 +43,7 @@ def rm_dir(path):
         return True
 
     try:
-        shutil.rmtree(path)
+        shutil_rmtree(path)
     except OSError:
         logging.exception(('Failed', 'Path: %r'), path)
     return not xbmcvfs.exists(path)

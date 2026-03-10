@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import json
+from json import loads as json_loads
 
 from .bookmark_item import BookmarkItem
 from .directory_item import DirectoryItem
@@ -65,7 +65,7 @@ def from_json(json_data, *args):
         if json_data == to_str(None):
             # Channel bookmark that will be updated. Store timestamp for update
             return bookmark_timestamp
-        json_data = json.loads(json_data, object_hook=_decoder)
+        json_data = json_loads(json_data, object_hook=_decoder)
 
     item_type = json_data.get('type')
     if not item_type or item_type not in _ITEM_TYPES:
