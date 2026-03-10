@@ -100,31 +100,6 @@ try:
             map(str, args or kwargs.get('iter'))
         ).encode('utf-8')).hexdigest()
 
-
-    SAFE_CHARS = frozenset(
-        b'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        b'abcdefghijklmnopqrstuvwxyz'
-        b'0123456789'
-        b'_.-~'
-        b'/'  # safe character by default
-    )
-    reserved = {
-        chr(ordinal): '%%%x' % ordinal
-        for ordinal in range(0, 128)
-        if ordinal not in SAFE_CHARS
-    }
-    reserved_plus = reserved.copy()
-    reserved_plus.update((
-        ('/', '%2f'),
-        (' ', '+'),
-    ))
-    reserved = str.maketrans(reserved)
-    reserved_plus = str.maketrans(reserved_plus)
-    non_ascii = str.maketrans({
-        chr(ordinal): '%%%x' % ordinal
-        for ordinal in range(128, 256)
-    })
-
 # Compatibility shims for Kodi v18 and Python v2.7
 except ImportError:
     import cPickle as pickle

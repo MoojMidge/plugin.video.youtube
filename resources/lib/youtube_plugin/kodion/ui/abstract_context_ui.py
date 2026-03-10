@@ -92,7 +92,6 @@ class AbstractContextUI(object):
     def get_container_bool(cls,
                            name,
                            container_id=True,
-                           strict=True,
                            stacklevel=None):
         raise NotImplementedError()
 
@@ -100,7 +99,6 @@ class AbstractContextUI(object):
     def get_container_info(cls,
                            name,
                            container_id=True,
-                           strict=True,
                            stacklevel=None):
         raise NotImplementedError()
 
@@ -108,7 +106,6 @@ class AbstractContextUI(object):
     def get_listitem_bool(cls,
                           name,
                           container_id=True,
-                          strict=True,
                           stacklevel=None):
         raise NotImplementedError()
 
@@ -116,7 +113,6 @@ class AbstractContextUI(object):
     def get_listitem_info(cls,
                           name,
                           container_id=True,
-                          strict=True,
                           stacklevel=None):
         raise NotImplementedError()
 
@@ -124,7 +120,6 @@ class AbstractContextUI(object):
     def get_listitem_property(cls,
                               name,
                               container_id=True,
-                              strict=True,
                               stacklevel=None):
         raise NotImplementedError()
 

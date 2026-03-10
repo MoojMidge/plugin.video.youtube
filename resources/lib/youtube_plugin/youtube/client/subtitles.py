@@ -80,7 +80,7 @@ class Subtitles(YouTubeRequestClient):
     }
 
     def __init__(self, context, video_id, use_mpd=None):
-        settings = context.get_settings()
+        settings = context.settings()
         super(Subtitles, self).__init__(
             context=context,
             language=settings.get_language(),

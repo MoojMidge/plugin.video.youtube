@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from atexit import register as atexit_register
 from functools import partial
 from re import compile as re_compile
-from weakref import proxy
+from weakref import proxy as weakref_proxy
 
 from .client import YouTubePlayerClient
 from .helper import (
@@ -34,6 +34,7 @@ from .youtube_exceptions import InvalidGrant, LoginException
 from ..kodion import AbstractProvider, logging
 from ..kodion.constants import (
     ADDON_ID,
+    CATEGORY_LABEL,
     CHANNEL_ID,
     CONTENT,
     HIDE_CHANNELS,
@@ -46,6 +47,7 @@ from ..kodion.constants import (
     HIDE_VIDEOS,
     INCOGNITO,
     PAGE,
+    PAGE_TOKEN,
     PATHS,
     PLAYLIST_ID,
     PLAY_COUNT,
@@ -141,9 +143,7 @@ class Provider(AbstractProvider):
     def get_client(self, context, refresh=False):
         access_manager = context.get_access_manager()
         api_store = context.get_api_store()
-        settings = context.get_settings()
-
-        user = access_manager.get_current_user()
+        settings = context.settings()
 
         client = self._client
         if not client or not client.initialised:
@@ -164,7 +164,7 @@ class Provider(AbstractProvider):
                                 'User #:  {user!r}',
                                 'Key set: {switch!r}'),
                                config=configs['user']['system'],
-                               user=user,
+                               user=access_manager.get_current_user(),
                                switch=switch)
             else:
                 switch = None
@@ -181,7 +181,7 @@ class Provider(AbstractProvider):
                                 'User #:  {user!r}',
                                 'Key set: {switch!r}'),
                                config=key_details['system'],
-                               user=user,
+                               user=access_manager.get_current_user(),
                                switch=switch)
             else:
                 key_details = configs['dev']
@@ -191,7 +191,7 @@ class Provider(AbstractProvider):
                                 'User #:  {user!r}',
                                 'Key set: {switch!r}'),
                                config=key_details['system'],
-                               user=user,
+                               user=access_manager.get_current_user(),
                                switch=switch)
 
         if key_details:
@@ -211,7 +211,7 @@ class Provider(AbstractProvider):
                     update_hash=False,
                 )
             if keys_changed:
-                self.log.info('API key set changed - Signing out')
+                self.log.info('Signing out - API key set changed')
                 yt_login.process(yt_login.SIGN_OUT, self, context)
 
         (
@@ -330,7 +330,7 @@ class Provider(AbstractProvider):
         if not resource_manager or resource_manager.context_changed(
                 context, client
         ):
-            new_resource_manager = ResourceManager(proxy(self),
+            new_resource_manager = ResourceManager(weakref_proxy(self),
                                                    context,
                                                    client,
                                                    progress_dialog)
@@ -447,7 +447,7 @@ class Provider(AbstractProvider):
             result = False
 
         json_data = resource_manager.get_my_playlists(
-            channel_id, params.get('page_token', '')
+            channel_id, params.get(PAGE_TOKEN, '')
         )
         if not json_data:
             return False, None
@@ -460,7 +460,7 @@ class Provider(AbstractProvider):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.LIST_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
         return result, options
@@ -510,7 +510,7 @@ class Provider(AbstractProvider):
         }
         context.parse_params(new_params)
 
-        batch_id = (playlist_id, context.get_param('page_token') or 0)
+        batch_id = (playlist_id, context.get_param(PAGE_TOKEN) or 0)
         json_data = resource_manager.get_playlist_items(batch_id=batch_id)
         if not json_data:
             return False, None
@@ -568,7 +568,7 @@ class Provider(AbstractProvider):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
         return result, options
@@ -618,7 +618,7 @@ class Provider(AbstractProvider):
         }
         context.parse_params(new_params)
 
-        batch_id = (playlist_id, context.get_param('page_token') or 0)
+        batch_id = (playlist_id, context.get_param(PAGE_TOKEN) or 0)
         json_data = resource_manager.get_playlist_items(batch_id=batch_id)
         if not json_data:
             return False, None
@@ -633,7 +633,7 @@ class Provider(AbstractProvider):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
         return result, options
@@ -670,7 +670,7 @@ class Provider(AbstractProvider):
 
         resource_manager = provider.get_resource_manager(context)
 
-        batch_id = (playlist_id, context.get_param('page_token') or 0)
+        batch_id = (playlist_id, context.get_param(PAGE_TOKEN) or 0)
         json_data = resource_manager.get_playlist_items(batch_id=batch_id)
         if not json_data:
             return False, None
@@ -680,7 +680,7 @@ class Provider(AbstractProvider):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
                 'sub_type': CONTENT.PLAYLIST,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
         return result, options
@@ -758,7 +758,7 @@ class Provider(AbstractProvider):
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
 
@@ -847,7 +847,7 @@ class Provider(AbstractProvider):
             else:
                 filtered_uploads = None
             while 1:
-                page_token = params.get('page_token')
+                page_token = params.get(PAGE_TOKEN)
                 if filtered_uploads:
                     batch_id = (filtered_uploads, page_token or 0)
                 else:
@@ -895,13 +895,13 @@ class Provider(AbstractProvider):
     def on_my_location(provider, context, **_kwargs):
         create_uri = context.create_uri
         localize = context.localize
-        settings = context.get_settings()
+        settings = context.settings()
         result = []
         options = {
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.LIST_CONTENT,
                 'sub_type': None,
-                'category_label': None,
+                CATEGORY_LABEL: None,
             },
         }
 
@@ -1011,7 +1011,7 @@ class Provider(AbstractProvider):
                 self.CONTENT_TYPE: {
                     'content_type': CONTENT.LIST_CONTENT,
                     'sub_type': None,
-                    'category_label': query,
+                    CATEGORY_LABEL: query,
                 },
             }
         result = []
@@ -1019,7 +1019,7 @@ class Provider(AbstractProvider):
         channel_id = params.get(CHANNEL_ID) or params.get('channelId')
         event_type = params.get('event_type') or params.get('eventType')
         location = params.get('location')
-        page_token = params.get('page_token') or params.get('pageToken') or ''
+        page_token = params.get(PAGE_TOKEN) or params.get('pageToken') or ''
         search_type = params.get('search_type', 'video') or params.get('type')
 
         options = {
@@ -1031,7 +1031,7 @@ class Provider(AbstractProvider):
                     CONTENT.LIST_CONTENT
                 ),
                 'sub_type': None,
-                'category_label': query,
+                CATEGORY_LABEL: query,
             },
         }
 
@@ -1180,7 +1180,7 @@ class Provider(AbstractProvider):
     )
     @staticmethod
     def on_manage_my_subscription_filter(context, re_match, **_kwargs):
-        settings = context.get_settings()
+        settings = context.settings()
         ui = context.get_ui()
 
         channel_name = context.get_param('item_name')
@@ -1309,7 +1309,7 @@ class Provider(AbstractProvider):
                 provider.CONTENT_TYPE: {
                     'content_type': CONTENT.VIDEO_CONTENT,
                     'sub_type': CONTENT.HISTORY,
-                    'category_label': None,
+                    CATEGORY_LABEL: None,
                 },
             }
             return video_items, options
@@ -1390,7 +1390,7 @@ class Provider(AbstractProvider):
     def on_root(provider, context, re_match):
         create_uri = context.create_uri
         localize = context.localize
-        settings = context.get_settings()
+        settings = context.settings()
         settings_bool = settings.get_bool
         bold = context.get_ui().bold
 
@@ -1400,7 +1400,7 @@ class Provider(AbstractProvider):
         result = []
         options = {
             provider.CONTENT_TYPE: {
-                'category_label': localize('youtube'),
+                CATEGORY_LABEL: localize('youtube'),
             },
             provider.CACHE_TO_DISC: False,
         }
@@ -1907,7 +1907,7 @@ class Provider(AbstractProvider):
                             'action': item.is_action(),
                             'special_sort': False,
                             'date_time': item.get_date(),
-                            'category_label': '__inherit__',
+                            CATEGORY_LABEL: '__inherit__',
                         }
                     else:
                         if isinstance(item, VideoItem):
@@ -1978,7 +1978,7 @@ class Provider(AbstractProvider):
                 provider.CONTENT_TYPE: {
                     'content_type': CONTENT.VIDEO_CONTENT,
                     'sub_type': None,
-                    'category_label': None,
+                    CATEGORY_LABEL: None,
                 },
             }
             return bookmarks, options
@@ -2140,7 +2140,7 @@ class Provider(AbstractProvider):
                 provider.CONTENT_TYPE: {
                     'content_type': CONTENT.VIDEO_CONTENT,
                     'sub_type': 'watch_later',
-                    'category_label': None,
+                    CATEGORY_LABEL: None,
                 },
             }
             return video_items, options

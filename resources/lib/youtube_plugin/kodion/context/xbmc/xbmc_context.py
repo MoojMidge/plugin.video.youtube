@@ -14,7 +14,7 @@ import json
 import sys
 from atexit import register as atexit_register
 from timeit import default_timer
-from weakref import proxy
+from weakref import proxy as weakref_proxy
 
 from ..abstract_context import AbstractContext
 from ... import logging
@@ -29,6 +29,7 @@ from ...constants import (
     ABORT_FLAG,
     ADDON_ID,
     BUSY_FLAG,
+    CATEGORY_LABEL,
     CHANNEL_ID,
     CONTENT,
     FOLDER_NAME,
@@ -187,7 +188,7 @@ class XbmcContext(AbstractContext):
         'failed.x': 30500,
         'feeds': 30518,
         'filtered': 30105,
-        'go_to.x': 30502,
+        'go.to.x': 30502,
         'history': 30509,
         'history.clear': 30609,
         'history.clear.check': 30610,
@@ -620,28 +621,34 @@ class XbmcContext(AbstractContext):
         return code
 
     def reload_access_manager(self):
-        access_manager = AccessManager(proxy(self))
+        access_manager = AccessManager(weakref_proxy(self))
         self._access_manager = access_manager
         return access_manager
 
     def reload_api_store(self):
-        api_store = APIKeyStore(proxy(self))
+        api_store = APIKeyStore(weakref_proxy(self))
         self._api_store = api_store
         return api_store
 
-    def get_playlist_player(self, playlist_type=None):
-        if self.get_param(PLAY_FORCE_AUDIO) or self.get_settings().audio_only():
-            playlist_type = 'audio'
+    def playlist_player(self, playlist_type=None):
         playlist_player = self._playlist
+
+        if self.get_param(PLAY_FORCE_AUDIO) or self.settings().audio_only():
+            playlist_type = 'audio'
+
         if not playlist_player or playlist_type:
-            playlist_player = XbmcPlaylistPlayer(proxy(self), playlist_type)
+            playlist_player = XbmcPlaylistPlayer(
+                weakref_proxy(self),
+                playlist_type,
+            )
             self._playlist = playlist_player
+
         return playlist_player
 
     def get_ui(self):
         ui = self._ui
         if not ui:
-            ui = XbmcContextUI(proxy(self))
+            ui = XbmcContextUI(weakref_proxy(self))
             self._ui = ui
         return ui
 
@@ -657,7 +664,7 @@ class XbmcContext(AbstractContext):
         if self.__class__._settings:
             self.__class__._settings.flush()
 
-    def get_settings(self, refresh=False):
+    def settings(self, refresh=False):
         if refresh or not self._settings:
             if self._plugin_id != ADDON_ID:
                 addon = xbmcaddon.Addon(self._plugin_id)
@@ -745,11 +752,11 @@ class XbmcContext(AbstractContext):
                 xbmcplugin.setContent(self._plugin_handle, content_type)
 
         if category_label is None:
-            category_label = self.get_param('category_label')
+            category_label = self.get_param(CATEGORY_LABEL)
         if category_label:
             xbmcplugin.setPluginCategory(self._plugin_handle, category_label)
 
-        detailed_labels = self.get_settings().show_detailed_labels()
+        detailed_labels = self.settings().show_detailed_labels()
         if sub_type == CONTENT.HISTORY:
             self.add_sort_method(
                 SORT.HISTORY_CONTENT_DETAILED
@@ -825,8 +832,8 @@ class XbmcContext(AbstractContext):
 
         return new_context
 
-    def execute(self,
-                command,
+    @staticmethod
+    def execute(command,
                 wait=False,
                 wait_for=None,
                 wait_for_set=True,
@@ -838,7 +845,6 @@ class XbmcContext(AbstractContext):
             _execute(command, wait)
             return
 
-        ui = self.get_ui()
         wait_for_abort = xbmc.Monitor().waitForAbort
 
         if block_ui is False:
@@ -853,12 +859,12 @@ class XbmcContext(AbstractContext):
             while not wait_for(**wait_for_kwargs) and not wait_for_abort(delay):
                 pass
         elif wait_for_set:
-            ui.clear_property(wait_for)
-            pop_property = ui.pop_property
+            XbmcContextUI.clear_property(wait_for)
+            pop_property = XbmcContextUI.pop_property
             while not pop_property(wait_for) and not wait_for_abort(1):
                 pass
         else:
-            get_property = ui.get_property
+            get_property = XbmcContextUI.get_property
             while get_property(wait_for) and not wait_for_abort(1):
                 pass
 
@@ -900,14 +906,14 @@ class XbmcContext(AbstractContext):
             return False
 
     @staticmethod
-    def send_notification(method, data=True, sender=ADDON_ID):
+    def send_notification(method, data=None, sender=ADDON_ID):
         jsonrpc(method='JSONRPC.NotifyAll',
                 params={'sender': sender,
                         'message': method,
-                        'data': data})
+                        'data': data or True})
 
     def use_inputstream_adaptive(self, prompt=False):
-        if not self.get_settings().use_isa():
+        if not self.settings().use_isa():
             return None
 
         while 1:
@@ -986,8 +992,9 @@ class XbmcContext(AbstractContext):
         except RuntimeError:
             return False
 
-    def abort_requested(self):
-        return self.get_ui().get_property(
+    @staticmethod
+    def abort_requested():
+        return XbmcContextUI.get_property(
             ABORT_FLAG, stacklevel=3, as_bool=True
         )
 
@@ -1019,7 +1026,8 @@ class XbmcContext(AbstractContext):
             except AttributeError:
                 pass
 
-    def ipc_exec(self,
+    @classmethod
+    def ipc_exec(cls,
                  target,
                  timeout=None,
                  payload=None,
@@ -1030,13 +1038,13 @@ class XbmcContext(AbstractContext):
             XbmcContextUI.set_property(SERVICE_RUNNING_FLAG, BUSY_FLAG)
             if raise_exc:
                 raise RuntimeError(msg)
-            self.log.warning_trace(msg, stacklevel=stacklevel)
+            cls.log.warning_trace(msg, stacklevel=stacklevel)
             return None
 
         data = {'target': target, 'response_required': bool(timeout)}
         if payload:
             data.update(payload)
-        self.send_notification(SERVICE_IPC, data)
+        cls.send_notification(SERVICE_IPC, data)
 
         if not timeout:
             return None
@@ -1054,7 +1062,7 @@ class XbmcContext(AbstractContext):
                 log_level = logging.DEBUG
                 log_value = value
                 stack_info = False
-            self.log.log(
+            cls.log.log(
                 level=log_level,
                 msg='Service IPC <{target}({payload})>:'
                     ' {value} (in {time_ms:.2f}ms)',
@@ -1067,7 +1075,7 @@ class XbmcContext(AbstractContext):
             )
         else:
             value = None
-            self.log.error_trace(
+            cls.log.error_trace(
                 'Service IPC <{target}({payload})>:'
                 ' TIMED OUT (in {time_s:.2f}s)',
                 target=target,

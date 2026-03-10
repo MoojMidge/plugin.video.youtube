@@ -328,7 +328,7 @@ class AccessManager(JSONStore):
         current_id = current_id.strip()
         current_id_lower = current_id.lower()
 
-        settings = self._context.get_settings()
+        settings = self._context.settings()
         settings_id = settings.get_watch_later_playlist()
         settings_id_lower = settings_id.lower()
 
@@ -353,7 +353,7 @@ class AccessManager(JSONStore):
         if not playlist_id:
             playlist_id = ''
 
-        self._context.get_settings().set_watch_later_playlist('')
+        self._context.settings().set_watch_later_playlist('')
 
         playlists = {
             'watch_later': playlist_id,
@@ -382,7 +382,7 @@ class AccessManager(JSONStore):
         current_id = current_id.strip()
         current_id_lower = current_id.lower()
 
-        settings = self._context.get_settings()
+        settings = self._context.settings()
         settings_id = settings.get_history_playlist()
         settings_id_lower = settings_id.lower()
 
@@ -407,7 +407,7 @@ class AccessManager(JSONStore):
         if not playlist_id:
             playlist_id = ''
 
-        self._context.get_settings().set_history_playlist('')
+        self._context.settings().set_history_playlist('')
 
         playlists = {
             'watch_history': playlist_id,

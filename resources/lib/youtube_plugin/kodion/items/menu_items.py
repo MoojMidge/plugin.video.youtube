@@ -13,11 +13,15 @@ from __future__ import absolute_import, division, unicode_literals
 from ..constants import (
     ARTIST,
     BOOKMARK_ID,
+    CATEGORY_LABEL,
     CHANNEL_ID,
     CONTEXT_MENU,
     INCOGNITO,
+    ITEM_NAME,
     MARK_AS_LABEL,
     ORDER,
+    PAGE,
+    PAGE_TOKEN,
     PATHS,
     PLAYLIST_ITEM_ID,
     PLAYLIST_ID,
@@ -27,10 +31,12 @@ from ..constants import (
     PLAY_TIMESHIFT,
     PLAY_USING,
     PROPERTY_AS_LABEL,
+    RELOAD_PATH,
     SUBSCRIPTION_ID,
     TITLE,
     URI,
     VIDEO_ID,
+    WINDOW_REPLACE,
     WINDOW_RETURN,
 )
 
@@ -57,12 +63,10 @@ def context_menu_uri(context, path, params=None, run=True, play=False):
 def video_more_for(context,
                    video_id=VIDEO_ID_INFOLABEL,
                    video_name=TITLE_INFOLABEL,
-                   logged_in=False,
                    refresh=False):
     params = {
         VIDEO_ID: video_id,
-        'item_name': video_name,
-        'logged_in': logged_in,
+        ITEM_NAME: video_name,
     }
     _refresh = context.refresh_requested(force=True, on=refresh)
     if _refresh:
@@ -87,7 +91,7 @@ def video_related(context,
             (PATHS.ROUTE, PATHS.RELATED_VIDEOS,),
             {
                 VIDEO_ID: video_id,
-                'item_name': video_name,
+                ITEM_NAME: video_name,
             },
         ),
     )
@@ -103,7 +107,7 @@ def video_comments(context,
             (PATHS.ROUTE, PATHS.VIDEO_COMMENTS),
             {
                 VIDEO_ID: video_id,
-                'item_name': video_name,
+                ITEM_NAME: video_name,
             },
         )
     )
@@ -119,7 +123,7 @@ def video_description_links(context,
             (PATHS.ROUTE, PATHS.DESCRIPTION_LINKS),
             {
                 VIDEO_ID: video_id,
-                'item_name': video_name,
+                ITEM_NAME: video_name,
             },
         )
     )
@@ -318,8 +322,8 @@ def playlist_remove_from(context,
                     PLAYLIST_ID: playlist_id,
                     PLAYLIST_ITEM_ID: playlist_item_id,
                     VIDEO_ID: video_id,
-                    'item_name': video_name,
-                    'reload_path': context.get_path(),
+                    ITEM_NAME: video_name,
+                    RELOAD_PATH: context.get_path(),
                 }
             ),
         ),
@@ -336,7 +340,7 @@ def playlist_rename(context,
             (PATHS.PLAYLIST, 'rename', 'playlist',),
             {
                 PLAYLIST_ID: playlist_id,
-                'item_name': playlist_name
+                ITEM_NAME: playlist_name
             },
         ),
     )
@@ -352,7 +356,7 @@ def playlist_delete(context,
             (PATHS.PLAYLIST, 'remove', 'playlist',),
             {
                 PLAYLIST_ID: playlist_id,
-                'item_name': playlist_name
+                ITEM_NAME: playlist_name
             },
         ),
     )
@@ -381,8 +385,8 @@ def playlist_remove_from_library(context,
             (PATHS.PLAYLIST, 'unlike', 'playlist',),
             {
                 PLAYLIST_ID: playlist_id,
-                'item_name': playlist_name,
-                'reload_path': context.get_path(),
+                ITEM_NAME: playlist_name,
+                RELOAD_PATH: context.get_path(),
             },
         ),
     )
@@ -398,7 +402,7 @@ def watch_later_list_unassign(context,
             (PATHS.PLAYLIST, 'unassign', 'watch_later',),
             {
                 PLAYLIST_ID: playlist_id,
-                'item_name': playlist_name
+                ITEM_NAME: playlist_name
             },
         ),
     )
@@ -414,7 +418,7 @@ def watch_later_list_assign(context,
             (PATHS.PLAYLIST, 'assign', 'watch_later',),
             {
                 PLAYLIST_ID: playlist_id,
-                'item_name': playlist_name
+                ITEM_NAME: playlist_name
             },
         ),
     )
@@ -430,7 +434,7 @@ def history_list_unassign(context,
             (PATHS.PLAYLIST, 'unassign', 'history',),
             {
                 PLAYLIST_ID: playlist_id,
-                'item_name': playlist_name
+                ITEM_NAME: playlist_name
             },
         ),
     )
@@ -446,7 +450,7 @@ def history_list_assign(context,
             (PATHS.PLAYLIST, 'assign', 'history',),
             {
                 PLAYLIST_ID: playlist_id,
-                'item_name': playlist_name
+                ITEM_NAME: playlist_name
             },
         ),
     )
@@ -459,7 +463,7 @@ def my_subscriptions_filter_remove(context, channel_name=ARTIST_INFOLABEL):
             context,
             ('my_subscriptions', 'filter', 'remove'),
             {
-                'item_name': channel_name,
+                ITEM_NAME: channel_name,
             },
         ),
     )
@@ -472,7 +476,7 @@ def my_subscriptions_filter_add(context, channel_name=ARTIST_INFOLABEL):
             context,
             ('my_subscriptions', 'filter', 'add',),
             {
-                'item_name': channel_name,
+                ITEM_NAME: channel_name,
             },
         ),
     )
@@ -519,7 +523,7 @@ def watch_later_local_remove(context,
             (PATHS.WATCH_LATER, 'remove',),
             {
                 VIDEO_ID: video_id,
-                'item_name': video_name,
+                ITEM_NAME: video_name,
             },
         ),
     )
@@ -539,12 +543,12 @@ def channel_go_to(context,
                   channel_id=CHANNEL_ID_INFOLABEL,
                   channel_name=ARTIST_INFOLABEL):
     return (
-        context.localize('go_to.x', context.get_ui().bold(channel_name)),
+        context.localize('go.to.x', context.get_ui().bold(channel_name)),
         context_menu_uri(
             context,
             (PATHS.ROUTE, PATHS.CHANNEL, channel_id,),
             {
-                'category_label': channel_name,
+                CATEGORY_LABEL: channel_name,
             }
         ),
     )
@@ -657,7 +661,7 @@ def history_local_remove(context,
             (PATHS.HISTORY, 'remove',),
             {
                 VIDEO_ID: video_id,
-                'item_name': video_name,
+                ITEM_NAME: video_name,
             },
         ),
     )
@@ -769,7 +773,7 @@ def bookmark_edit(context,
             (PATHS.BOOKMARKS, 'edit',),
             {
                 'item_id': item_id,
-                'item_name': item_name,
+                ITEM_NAME: item_name,
                 'uri': item_uri,
             },
         ),
@@ -786,7 +790,7 @@ def bookmark_remove(context,
             (PATHS.BOOKMARKS, 'remove',),
             {
                 'item_id': item_id,
-                'item_name': item_name,
+                ITEM_NAME: item_name,
             },
         ),
     )
@@ -848,14 +852,18 @@ def search_sort_by(context, params, order):
         context_menu_uri(
             context,
             (PATHS.ROUTE, context.get_path(),),
-            params=dict(params,
-                        order=order,
-                        page=1,
-                        page_token='',
-                        pageToken='',
-                        window_replace=True,
-                        window_return=False),
-        ),
+            dict(
+                params,
+                pageToken='',
+                **{
+                    ORDER: order,
+                    PAGE: 1,
+                    PAGE_TOKEN: '',
+                    WINDOW_REPLACE: True,
+                    WINDOW_RETURN: False,
+                }
+            ),
+        )
     )
 
 

@@ -20,6 +20,7 @@ from ...kodion import logging
 from ...kodion.compatibility import string_type, urlencode, urlunsplit, xbmc
 from ...kodion.constants import (
     BUSY_FLAG,
+    CATEGORY_LABEL,
     CHANNEL_ID,
     CONTENT,
     CONTEXT_MENU,
@@ -46,7 +47,6 @@ from ...kodion.constants import (
 from ...kodion.items import AudioItem, UriItem, VideoItem
 from ...kodion.network import get_connect_address
 from ...kodion.utils.datetime import datetime_elapsed
-from ...kodion.utils.redact import redact_params
 
 
 def _play_stream(provider, context, video_id=None, reload=False):
@@ -61,7 +61,7 @@ def _play_stream(provider, context, video_id=None, reload=False):
         return False
 
     client = provider.get_client(context)
-    settings = context.get_settings()
+    settings = context.settings()
 
     incognito = params.get(INCOGNITO, False)
     screensaver = params.get(SCREENSAVER, False)
@@ -279,7 +279,7 @@ def _play_playlist(provider, context):
                 provider.CONTENT_TYPE: {
                     'content_type': CONTENT.VIDEO_CONTENT,
                     'sub_type': None,
-                    'category_label': None,
+                    CATEGORY_LABEL: None,
                 },
             }
         else:
@@ -332,7 +332,7 @@ def _select_stream(context,
                    ask_for_quality,
                    audio_only,
                    use_mpd=True):
-    settings = context.get_settings()
+    settings = context.settings()
     if settings.use_isa():
         isa_capabilities = context.inputstream_adaptive_capabilities()
         use_adaptive = bool(isa_capabilities)
@@ -447,7 +447,7 @@ def process_items_for_playlist(context,
         return items
 
     # stop and clear the playlist
-    playlist_player = context.get_playlist_player()
+    playlist_player = context.playlist_player()
     playlist_player.clear()
     playlist_player.unshuffle()
 
@@ -565,15 +565,14 @@ def process(provider, context, video_id=None, reload=False, **_kwargs):
                     and context.is_plugin_folder(name=True)):
                 return UriItem('command://Action(Play)')
 
-            return UriItem('command://{0}'.format(
-                context.create_uri(
-                    (PATHS.PLAY,),
-                    params,
-                    play=(xbmc.PLAYLIST_MUSIC
-                          if (ui.get_property(PLAY_FORCE_AUDIO)
-                              or context.get_settings().audio_only()) else
-                          xbmc.PLAYLIST_VIDEO),
-                )
+            return UriItem(context.create_uri(
+                (PATHS.PLAY,),
+                params,
+                play=(xbmc.PLAYLIST_MUSIC
+                      if (ui.get_property(PLAY_FORCE_AUDIO)
+                          or context.settings().audio_only()) else
+                      xbmc.PLAYLIST_VIDEO),
+                command=True,
             ))
 
         if not context.get_system_version().compatible(22):
@@ -581,7 +580,7 @@ def process(provider, context, video_id=None, reload=False, **_kwargs):
 
         media_item = _play_stream(provider, context)
         if media_item:
-            playlist_player = context.get_playlist_player()
+            playlist_player = context.playlist_player()
             position, _ = playlist_player.get_position()
             if position:
                 item_uri = playlist_player.get_item_path(position - 1)

@@ -77,7 +77,7 @@ def get_thumb_timestamp(minutes=15):
 
 def make_comment_item(context, snippet, uri, reply_count=0):
     localize = context.localize
-    settings = context.get_settings()
+    settings = context.settings()
     ui = context.get_ui()
 
     author = snippet.get('authorDisplayName')
@@ -207,7 +207,7 @@ def update_channel_items(provider, context, channel_id_dict,
     client = provider.get_client(context)
     logged_in = client.logged_in
 
-    settings = context.get_settings()
+    settings = context.settings()
     show_details = settings.show_detailed_description()
 
     localize = context.localize
@@ -404,7 +404,7 @@ def update_playlist_items(provider, context, playlist_id_dict,
         history_id = ''
         watch_later_id = ''
 
-    settings = context.get_settings()
+    settings = context.settings()
     show_details = settings.show_detailed_description()
     item_count_color = settings.get_label_color('itemCount')
 
@@ -642,7 +642,7 @@ def update_video_items(provider, context, video_id_dict,
     else:
         watch_later_id = ''
 
-    settings = context.get_settings()
+    settings = context.settings()
     alternate_player = settings.support_alternative_player()
     default_web_urls = settings.default_player_web_urls()
     ask_quality = not default_web_urls and settings.ask_for_video_quality()
@@ -752,7 +752,6 @@ def update_video_items(provider, context, video_id_dict,
     cxm_refresh_listing = menu_items.refresh_listing(context)
     cxm_more = menu_items.video_more_for(
         context,
-        logged_in=logged_in,
         refresh=path.startswith((PATHS.LIKED_VIDEOS, PATHS.DISLIKED_VIDEOS)),
     )
 
@@ -1157,7 +1156,7 @@ def update_play_info(provider,
         yt_items_dict={video_id: yt_item},
     )
 
-    settings = context.get_settings()
+    settings = context.settings()
 
     meta_data = video_stream.get('meta')
     if meta_data:
@@ -1229,7 +1228,7 @@ def update_channel_info(provider,
     if not data:
         return
 
-    settings = context.get_settings()
+    settings = context.settings()
     channel_name_aliases = settings.get_channel_name_aliases()
     fanart_type = context.get_param(FANART_TYPE)
     if fanart_type is None:
@@ -1368,7 +1367,7 @@ def get_thumbnail(thumb_size, thumbnails, default_thumb=None):
 
 
 def add_related_video_to_playlist(provider, context, client, v3, video_id):
-    playlist_player = context.get_playlist_player()
+    playlist_player = context.playlist_player()
     if playlist_player.size() > 999:
         return
     playlist_items = playlist_player.get_items()

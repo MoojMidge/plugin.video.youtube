@@ -59,9 +59,7 @@ class JSONStore(object):
             if not filepath:
                 raise IOError
 
-            self.log.debug(('Saving', 'File: %s'),
-                           filepath,
-                           stacklevel=stacklevel)
+            self.log.debug('Saving: %s', filepath, stacklevel=stacklevel)
 
             _data = self._data
             if loaded is False:
@@ -83,9 +81,7 @@ class JSONStore(object):
                 raise ValueError
 
             if data == _data:
-                self.log.debug(('Data unchanged', 'File: %s'),
-                               filepath,
-                               stacklevel=stacklevel)
+                self.log.debug('Unchanged: %s', filepath, stacklevel=stacklevel)
                 return None
 
             _data = json.dumps(
@@ -97,9 +93,7 @@ class JSONStore(object):
             )
 
             if loaded is False:
-                self.log.debug(('File write deferred', 'File: %s'),
-                               filepath,
-                               stacklevel=stacklevel)
+                self.log.debug('Deferred: %s', filepath, stacklevel=stacklevel)
                 return None
 
             if ipc:
@@ -117,7 +111,7 @@ class JSONStore(object):
                 if response is False:
                     raise IOError
                 if response is None:
-                    self.log.debug(('Data unchanged', 'File: %s'),
+                    self.log.debug('Unchanged: %s',
                                    filepath,
                                    stacklevel=stacklevel)
                     return None
@@ -145,9 +139,7 @@ class JSONStore(object):
             if not filepath:
                 raise IOError
 
-            self.log.debug(('Loading', 'File: %s'),
-                           filepath,
-                           stacklevel=stacklevel)
+            self.log.debug('Loading: %s', filepath, stacklevel=stacklevel)
 
             if ipc:
                 if self._context.ipc_exec(

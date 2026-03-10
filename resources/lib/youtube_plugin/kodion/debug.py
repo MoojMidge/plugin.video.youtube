@@ -20,7 +20,7 @@ from inspect import getargvalues
 from os.path import normpath
 import pstats
 from traceback import extract_stack, format_list
-from weakref import ref
+from weakref import ref as weakref_ref
 
 from . import logging
 from .compatibility import StringIO
@@ -47,7 +47,7 @@ def debug_here(host='localhost'):
     pydevd.settrace(host, stdoutToServer=True, stderrToServer=True)
 
 
-class ProfilerProxy(ref):
+class ProfilerProxy(weakref_ref):
     def __call__(self, *args, **kwargs):
         return super(ProfilerProxy, self).__call__().__call__(
             *args, **kwargs

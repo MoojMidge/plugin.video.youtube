@@ -48,9 +48,9 @@ def run(context=_context,
 
     if ui.pop_property(CHECK_SETTINGS):
         provider.reset_client(context=context)
-        settings = context.get_settings(refresh=True)
+        settings = context.settings(refresh=True)
     else:
-        settings = context.get_settings()
+        settings = context.settings()
 
     log_level = settings.log_level()
     if log_level:

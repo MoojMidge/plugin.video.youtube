@@ -27,7 +27,6 @@ from ..constants import (
     TRAKT_PAUSE_FLAG,
     VIDEO_ID,
 )
-from ..utils.redact import redact_params
 from ..utils.convert_format import channel_filter_split
 
 
@@ -118,8 +117,8 @@ class PlayerMonitorThread(object):
             )
 
         access_manager = context.get_access_manager()
-        settings = context.get_settings()
-        playlist_player = context.get_playlist_player()
+        settings = context.settings()
+        playlist_player = context.playlist_player()
 
         video_id_param = 'video_id=%s' % video_id
         report_url = use_remote_history and playback_stats.get('watchtime_url')
@@ -189,7 +188,6 @@ class PlayerMonitorThread(object):
                     if state == 'playing' or last_state == 'playing':
                         client = provider.get_client(context)
                         logged_in = client.logged_in
-
                         if logged_in:
                             client.update_watch_history(
                                 video_id,
@@ -511,7 +509,7 @@ class PlayerMonitor(xbmc.Player):
         if not ui.busy_dialog_active():
             ui.clear_property(BUSY_FLAG)
 
-        ui.pop_property(PLAY_USING)
+        ui.clear_property(PLAY_USING)
         ui.clear_property(TRAKT_PAUSE_FLAG, raw=True)
 
         self.stop_threads()

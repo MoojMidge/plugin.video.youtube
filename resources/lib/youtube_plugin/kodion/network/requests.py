@@ -215,7 +215,7 @@ class BaseRequestsClass(object):
                         if context is None else
                         context)
         if cls._context:
-            settings = cls._context.get_settings()
+            settings = cls._context.settings()
             cls._verify = (settings.verify_ssl()
                            if verify_ssl is None else
                            verify_ssl)

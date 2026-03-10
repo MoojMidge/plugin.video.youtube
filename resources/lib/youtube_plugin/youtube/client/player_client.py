@@ -833,7 +833,7 @@ class YouTubePlayerClient(YouTubeDataClient):
         self.video_id = None
         self.yt_item = None
 
-        settings = context.get_settings()
+        settings = context.settings()
         self._ask_for_quality = settings.ask_for_video_quality()
         self._audio_only = settings.audio_only()
         self._use_mpd = settings.use_mpd_videos()
@@ -1233,7 +1233,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             playback_stats = {}
 
         context = self._context
-        settings = context.get_settings()
+        settings = context.settings()
         if self._use_mpd:
             qualities = settings.mpd_video_qualities()
             selected_height = qualities[0]['nom_height']
@@ -1339,7 +1339,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             playback_stats = {}
 
         context = self._context
-        settings = context.get_settings()
+        settings = context.settings()
         if self._use_mpd:
             qualities = settings.mpd_video_qualities()
             selected_height = qualities[0]['nom_height']
@@ -1734,7 +1734,7 @@ class YouTubePlayerClient(YouTubeDataClient):
         has_visitor_data = bool(visitor_data)
 
         context = self._context
-        settings = context.get_settings()
+        settings = context.settings()
         age_gate_enabled = settings.age_gate()
         use_remote_history = settings.use_remote_history()
 
@@ -2221,7 +2221,7 @@ class YouTubePlayerClient(YouTubeDataClient):
                                       r'"((?P<codec>.+?)(?:\.(?P<props>.+))?)"'
                                   )):
         context = self._context
-        settings = context.get_settings()
+        settings = context.settings()
         audio_only = self._audio_only
         qualities = settings.mpd_video_qualities()
         isa_capabilities = context.inputstream_adaptive_capabilities()
@@ -2771,7 +2771,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             return skip_group
 
         context = self._context
-        settings = context.get_settings()
+        settings = context.settings()
         stream_features = settings.stream_features()
         do_filter = 'filter' in stream_features
         frame_rate_hint = 'no_fr_hint' not in stream_features
@@ -2792,10 +2792,10 @@ class YouTubePlayerClient(YouTubeDataClient):
         output = [
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
-                ' xmlns="urn:mpeg:dash:schema:mpd:2011"'
-                ' xmlns:xlink="http://www.w3.org/1999/xlink"'
-                ' xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"'
-                ' minBufferTime="PT1.5S"'
+            ' xmlns="urn:mpeg:dash:schema:mpd:2011"'
+            ' xmlns:xlink="http://www.w3.org/1999/xlink"'
+            ' xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"'
+            ' minBufferTime="PT1.5S"'
                 ' mediaPresentationDuration="PT', str(duration), 'S"'
                 ' type="static"'
                 ' profiles="urn:mpeg:dash:profile:isoff-main:2011"'
@@ -2858,33 +2858,33 @@ class YouTubePlayerClient(YouTubeDataClient):
 
             output.extend((
                 '\t\t<AdaptationSet'
-                    ' subsegmentAlignment="true"'
-                    ' subsegmentStartsWithSAP="1"'
-                    ' bitstreamSwitching="true"'
-                    ' id="', str(set_id), '"'
-                    ' contentType="', media_type, '"'
-                    ' mimeType="', mime_type, '"'
-                    ' lang="', language, '"'
-                    # name attribute is ISA specific and does not exist in the
-                    # MPD spec. Should be a child Label element instead
-                    ' name="[B]', label, '[/B]"'
-                    # original / default / impaired are ISA specific attributes
-                    ' original="', VALUE_TO_STR[original], '"'
-                    ' default="', VALUE_TO_STR[default], '"'
-                    ' impaired="', VALUE_TO_STR[impaired], '"'
-                    '>\n'
+                ' subsegmentAlignment="true"'
+                ' subsegmentStartsWithSAP="1"'
+                ' bitstreamSwitching="true"'
+                ' id="', str(set_id), '"'
+                ' contentType="', media_type, '"'
+                ' mimeType="', mime_type, '"'
+                ' lang="', language, '"'
+                # name attribute is ISA specific and does not exist in the
+                # MPD spec. Should be a child Label element instead
+                ' name="[B]', label, '[/B]"'
+                # original / default / impaired are ISA specific attributes
+                ' original="', VALUE_TO_STR[original], '"'
+                ' default="', VALUE_TO_STR[default], '"'
+                ' impaired="', VALUE_TO_STR[impaired], '"'
+                '>\n'
                 # AdaptationSet Label element not currently used by ISA
                 '\t\t\t<Label>', label, '</Label>\n'
                 '\t\t\t<Role'
-                    ' schemeIdUri="urn:mpeg:dash:role:2011"'
-                    ' value="', role, '"'
-                    '/>\n'
+                ' schemeIdUri="urn:mpeg:dash:role:2011"'
+                ' value="', role, '"'
+                '/>\n'
             ))
 
             num_streams = len(streams)
             if media_type == 'audio':
                 output.extend([(
-                    '\t\t\t<Representation'
+                        '\t\t\t<Representation'
                         ' id="{id}"'
                         ' codecs="{codecs}"'
                         ' mimeType="{mimeType}"'
@@ -2895,7 +2895,7 @@ class YouTubePlayerClient(YouTubeDataClient):
                         ' qualityRanking="{quality}"'
                         ' selectionPriority="{priority}"'
                         '>\n'
-                    '\t\t\t\t<AudioChannelConfiguration'
+                        '\t\t\t\t<AudioChannelConfiguration'
                         ' schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011"'
                         ' value="{channels}"'
                         '/>\n'
@@ -2923,14 +2923,16 @@ class YouTubePlayerClient(YouTubeDataClient):
 
             elif media_type == 'video':
                 output.extend([(
-                    '\t\t\t<Representation'
+                        '\t\t\t<Representation'
                         ' id="{id}"'
                         ' codecs="{codecs}"'
                         ' mimeType="{mimeType}"'
                         ' bandwidth="{bitrate}"'
                         ' width="{width}"'
-                        ' height="{height}"' +
-                        (' frameRate="{frameRate}"' if frame_rate_hint else '') +
+                        ' height="{height}"'
+                        + (
+                            ' frameRate="{frameRate}"' if frame_rate_hint else ''
+                        ) +
                         # quality and priority attributes are not used by ISA
                         ' qualityRanking="{quality}"'
                         ' selectionPriority="{priority}"'
@@ -2982,30 +2984,30 @@ class YouTubePlayerClient(YouTubeDataClient):
 
                 output.extend((
                     '\t\t<AdaptationSet'
-                        ' id="', str(set_id), '"'
-                        ' contentType="text"'
-                        ' mimeType="', subtitle['mime_type'], '"'
-                        ' lang="', lang_code, '"'
-                        # name attribute is ISA specific and does not exist in
-                        # the MPD spec. Should be a child Label element instead
-                        ' name="[B]', label, '[/B]"'
-                        # original / default are ISA specific attributes
-                        ' original="', VALUE_TO_STR[subtitle['original']], '"'
-                        ' default="', VALUE_TO_STR[subtitle['default']], '"'
-                        '>\n'
+                    ' id="', str(set_id), '"'
+                    ' contentType="text"'
+                    ' mimeType="', subtitle['mime_type'], '"'
+                    ' lang="', lang_code, '"'
+                    # name attribute is ISA specific and does not exist in
+                    # the MPD spec. Should be a child Label element instead
+                    ' name="[B]', label, '[/B]"'
+                    # original / default are ISA specific attributes
+                    ' original="', VALUE_TO_STR[subtitle['original']], '"'
+                    ' default="', VALUE_TO_STR[subtitle['default']], '"'
+                    '>\n'
                     # AdaptationSet Label element not currently used by ISA
                     '\t\t\t<Label>', label, '</Label>\n'
                     '\t\t\t<Role'
-                        ' schemeIdUri="urn:mpeg:dash:role:2011"'
-                        ' value="subtitle"'
-                        '/>\n'
+                    ' schemeIdUri="urn:mpeg:dash:role:2011"'
+                    ' value="subtitle"'
+                    '/>\n'
                     '\t\t\t<Representation'
-                        ' id="subs_', kind, '"'
-                        ' codecs="', subtitle['codec'], '"'
-                        ' mimeType="', subtitle['mime_type'], '"'
-                        # unsure about what value to use for bandwidth
-                        # ' bandwidth="0"'
-                        '>\n'
+                    ' id="subs_', kind, '"'
+                    ' codecs="', subtitle['codec'], '"'
+                    ' mimeType="', subtitle['mime_type'], '"'
+                    # unsure about what value to use for bandwidth
+                    # ' bandwidth="0"'
+                    '>\n'
                     '\t\t\t\t<BaseURL>', url, '</BaseURL>\n'
                     '\t\t\t</Representation>\n'
                     '\t\t</AdaptationSet>\n'

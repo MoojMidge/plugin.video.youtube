@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 
 def _config_actions(context, action, *_args):
     localize = context.localize
-    settings = context.get_settings()
+    settings = context.settings()
     ui = context.get_ui()
 
     if action == 'youtube':
@@ -141,13 +141,13 @@ def _config_actions(context, action, *_args):
         locator.locate_requester()
         coords = locator.coordinates()
         if coords:
-            context.get_settings().set_location(
+            context.settings().set_location(
                 '{0[lat]},{0[lon]}'.format(coords)
             )
 
     elif action == 'language_region':
         client = Provider().get_client(context)
-        settings = context.get_settings()
+        settings = context.settings()
 
         plugin_language = settings.get_language()
         plugin_region = settings.get_region()
@@ -230,7 +230,7 @@ def _config_actions(context, action, *_args):
             return
 
         # set new language id and region id
-        settings = context.get_settings()
+        settings = context.settings()
         settings.set_language(language_id)
         settings.set_region(region_id)
 
@@ -489,7 +489,7 @@ def run(argv):
             if params:
                 params = dict(parse_qsl(args.query))
 
-        log_level = context.get_settings().log_level()
+        log_level = context.settings().log_level()
         if log_level:
             log.debugging = True
             # Verbose

@@ -100,8 +100,8 @@ class XbmcPlugin(AbstractPlugin):
         path = context.get_path().rstrip('/')
 
         route = ui.pop_property(REROUTE_PATH)
-        _post_run_action = None
-        post_run_actions = []
+        _post_run_operation = None
+        post_run_operations = []
         succeeded = False
         for was_busy in (ui.pop_property(BUSY_FLAG),):
             if was_busy:
@@ -112,7 +112,7 @@ class XbmcPlugin(AbstractPlugin):
             else:
                 break
 
-            playlist_player = context.get_playlist_player()
+            playlist_player = context.playlist_player()
             position, remaining = playlist_player.get_position()
             playing = path == PATHS.PLAY and playlist_player.is_playing()
 
@@ -132,11 +132,11 @@ class XbmcPlugin(AbstractPlugin):
             if not playing:
                 logging.warning('Multiple busy dialogs active'
                                 ' - Plugin call ended to avoid Kodi crash')
-                result, _post_run_action = self.uri_action(context, uri)
+                result, _post_run_operation = self.uri_operation(context, uri)
                 succeeded = result
-                if _post_run_action:
-                    post_run_actions.append(_post_run_action)
-                    _post_run_action = None
+                if _post_run_operation:
+                    post_run_operations.append(_post_run_operation)
+                    _post_run_operation = None
                 continue
 
             if position:
@@ -176,21 +176,21 @@ class XbmcPlugin(AbstractPlugin):
                                   ' - Playback restart failed, retrying...')
                     command = playlist_player.play_playlist_item(position,
                                                                  defer=True)
-                    result, _post_run_action = self.uri_action(
+                    result, _post_run_operation = self.uri_operation(
                         context,
                         command,
                     )
                     succeeded = False
-                    if _post_run_action:
-                        post_run_actions.append(_post_run_action)
-                        _post_run_action = None
+                    if _post_run_operation:
+                        post_run_operations.append(_post_run_operation)
+                        _post_run_operation = None
                     break
                 context.sleep(1)
             else:
                 playlist_player.play_playlist_item(position)
         else:
-            if post_run_actions:
-                self.post_run(context, ui, *post_run_actions)
+            if post_run_operations:
+                self.post_run(context, post_run_operations)
             return succeeded
 
         if ui.get_property(PLUGIN_SLEEPING):
@@ -202,7 +202,7 @@ class XbmcPlugin(AbstractPlugin):
         if ui.pop_property(RELOAD_ACCESS_MANAGER):
             context.reload_access_manager()
 
-        settings = context.get_settings()
+        settings = context.settings()
         setup_wizard_required = settings.setup_wizard_enabled()
         if setup_wizard_required:
             provider.run_wizard(context, last_run=setup_wizard_required)
@@ -269,13 +269,13 @@ class XbmcPlugin(AbstractPlugin):
                     )
                 ]
                 if force_return:
-                    _, _post_run_action = self.uri_action(
+                    _, _post_run_operation = self.uri_operation(
                         context,
                         'command://Action(Back)'
                     )
-                    if _post_run_action:
-                        post_run_actions.append(_post_run_action)
-                        _post_run_action = None
+                    if _post_run_operation:
+                        post_run_operations.append(_post_run_operation)
+                        _post_run_operation = None
 
             items = []
             for item in result:
@@ -331,13 +331,13 @@ class XbmcPlugin(AbstractPlugin):
                 force_play = options.get(provider.FORCE_PLAY)
 
             if force_play or not result_item.playable:
-                _, _post_run_action = self.uri_action(
+                _, _post_run_operation = self.uri_operation(
                     context,
                     result_item.get_uri()
                 )
-                if _post_run_action:
-                    post_run_actions.append(_post_run_action)
-                    _post_run_action = None
+                if _post_run_operation:
+                    post_run_operations.append(_post_run_operation)
+                    _post_run_operation = None
             else:
                 item = self._PLAY_ITEM_MAP[result_item_type](
                     context,
@@ -356,7 +356,7 @@ class XbmcPlugin(AbstractPlugin):
             fallback = options.get(provider.FALLBACK, not force_return)
             if isinstance(fallback, string_type) and fallback != uri:
                 if options.get(provider.POST_RUN):
-                    _, _post_run_action = self.uri_action(
+                    _, _post_run_operation = self.uri_operation(
                         context,
                         fallback,
                     )
@@ -365,7 +365,7 @@ class XbmcPlugin(AbstractPlugin):
                     return self.run(provider, context, forced=forced)
             elif fallback:
                 if play_cancelled:
-                    _, _post_run_action = self.uri_action(context, uri)
+                    _, _post_run_operation = self.uri_operation(context, uri)
                 elif path == PATHS.PLAY:
                     context.send_notification(
                         PLAYBACK_FAILED,
@@ -384,7 +384,7 @@ class XbmcPlugin(AbstractPlugin):
                         listitem=item,
                     )
                 elif options.get(provider.FORCE_REFRESH):
-                    _post_run_action = (
+                    _post_run_operation = (
                         context.send_notification,
                         {
                             'method': REFRESH_CONTAINER,
@@ -392,7 +392,7 @@ class XbmcPlugin(AbstractPlugin):
                     )
                 else:
                     if context.is_plugin_folder():
-                        _, _post_run_action = self.uri_action(
+                        _, _post_run_operation = self.uri_operation(
                             context,
                             context.get_parent_uri(params={
                                 WINDOW_FALLBACK: True,
@@ -401,13 +401,13 @@ class XbmcPlugin(AbstractPlugin):
                             }),
                         )
                     else:
-                        _, _post_run_action = self.uri_action(
+                        _, _post_run_operation = self.uri_operation(
                             context,
                             'command://Action(Back)',
                         )
-            if _post_run_action:
-                post_run_actions.append(_post_run_action)
-                _post_run_action = None
+            if _post_run_operation:
+                post_run_operations.append(_post_run_operation)
+                _post_run_operation = None
 
         if ui.pop_property(PLAY_FORCED):
             context.set_path(PATHS.PLAY)
@@ -431,7 +431,7 @@ class XbmcPlugin(AbstractPlugin):
                 if (container and position
                         and (forced or position == 'current')
                         and (not played_video_id or route)):
-                    post_run_actions.append((
+                    post_run_operations.append((
                         context.send_notification,
                         {
                             'method': CONTAINER_FOCUS,
@@ -442,83 +442,85 @@ class XbmcPlugin(AbstractPlugin):
                         },
                     ))
 
-        if post_run_actions:
-            self.post_run(context, ui, *post_run_actions)
+        if post_run_operations:
+            self.post_run(context, post_run_operations)
         return succeeded
 
     @staticmethod
-    def post_run(context, ui, *actions, **kwargs):
+    def post_run(context, operations, **kwargs):
+        ui = context.get_ui()
+
         timeout = kwargs.get('timeout', 30)
         interval = kwargs.get('interval', 0.1)
         busy = True
-        for action in actions:
+        for operation in operations:
             while not ui.get_container(container_type=False, check_ready=True):
                 timeout -= interval
                 if timeout < 0:
                     logging.error('Container not ready'
-                                  ' - Post run action unable to execute')
+                                  ' - Post run operation unable to execute')
                     break
                 context.sleep(interval)
             else:
                 if busy:
                     busy = ui.clear_property(BUSY_FLAG)
-                if isinstance(action, tuple):
-                    action, action_kwargs = action
+                if isinstance(operation, tuple):
+                    operation, operation_kwargs = operation
                 else:
-                    action_kwargs = None
-                logging.debug(('Executing queued post-run action',
-                               'Action:    {action}',
-                               'Arguments: {action_kwargs!p}'),
-                              action=action,
-                              action_kwargs=action_kwargs,
+                    operation_kwargs = None
+                logging.debug(('Executing queued post-run operation',
+                               'Operation: {operation}',
+                               'Arguments: {operation_kwargs!p}'),
+                              operation=operation,
+                              operation_kwargs=operation_kwargs,
                               stacklevel=2)
-                if callable(action):
-                    if action_kwargs:
-                        action(**action_kwargs)
+                if callable(operation):
+                    if operation_kwargs:
+                        operation(**operation_kwargs)
                     else:
-                        action()
+                        operation()
                 else:
-                    context.execute(action)
+                    context.execute(operation)
                 context.sleep(interval)
 
     @staticmethod
-    def uri_action(context, uri):
+    def uri_operation(context, uri):
         if uri.startswith('script://'):
             _uri = uri[len('script://'):]
-            log_action = 'RunScript queued'
+            log_operation = 'RunScript queued'
             log_uri = _uri
-            action = 'RunScript({0})'.format(_uri)
+            operation = 'RunScript({0})'.format(_uri)
             result = True
 
         elif uri.startswith('command://'):
             _uri = uri[len('command://'):]
-            log_action = 'Builtin command queued'
+            log_operation = 'Builtin command queued'
             log_uri = _uri
-            action = _uri
+            operation = _uri
             result = True
 
         elif uri.startswith('PlayMedia('):
-            log_action = 'PlayMedia queued'
+            log_operation = 'PlayMedia queued'
             log_uri = uri[len('PlayMedia('):-1].split(',')
             log_uri[0] = parse_and_redact_uri(
                 log_uri[0],
                 redact_only=True,
             )
             log_uri = ','.join(log_uri)
-            action = uri
+            operation = uri
             result = True
 
         elif uri.startswith('RunPlugin('):
-            log_action = 'RunPlugin queued'
+            log_operation = 'RunPlugin queued'
             log_uri = parse_and_redact_uri(
                 uri[len('RunPlugin('):-1],
                 redact_only=True,
             )
-            action = uri
+            operation = uri
             result = True
 
         elif uri.startswith('ActivateWindow('):
-            log_action = 'ActivateWindow queued'
+            log_operation = 'ActivateWindow queued'
             log_uri = uri[len('ActivateWindow('):-1].split(',')
             if len(log_uri) >= 2:
                 log_uri[1] = parse_and_redact_uri(
@@ -526,11 +528,11 @@ class XbmcPlugin(AbstractPlugin):
                     redact_only=True,
                 )
             log_uri = ','.join(log_uri)
-            action = uri
+            operation = uri
             result = False
 
         elif uri.startswith('ReplaceWindow('):
-            log_action = 'ReplaceWindow queued'
+            log_operation = 'ReplaceWindow queued'
             log_uri = uri[len('ReplaceWindow('):-1].split(',')
             if len(log_uri) >= 2:
                 log_uri[1] = parse_and_redact_uri(
@@ -538,11 +540,11 @@ class XbmcPlugin(AbstractPlugin):
                     redact_only=True,
                 )
             log_uri = ','.join(log_uri)
-            action = uri
+            operation = uri
             result = False
 
         elif uri.startswith('Container.Update('):
-            log_action = 'Container.Update queued'
+            log_operation = 'Container.Update queued'
             log_uri = uri[len('Container.Update('):-1].split(',')
             if log_uri[0]:
                 log_uri[0] = parse_and_redact_uri(
@@ -550,11 +552,11 @@ class XbmcPlugin(AbstractPlugin):
                     redact_only=True,
                 )
             log_uri = ','.join(log_uri)
-            action = uri
+            operation = uri
             result = False
 
         elif uri.startswith('Container.Refresh('):
-            log_action = 'Container.Refresh queued'
+            log_operation = 'Container.Refresh queued'
             log_uri = uri[len('Container.Refresh('):-1].split(',')
             if log_uri[0]:
                 log_uri[0] = parse_and_redact_uri(
@@ -562,7 +564,7 @@ class XbmcPlugin(AbstractPlugin):
                     redact_only=True,
                 )
             log_uri = ','.join(log_uri)
-            action = uri
+            operation = uri
             result = False
 
         elif context.is_plugin_path(uri):
@@ -570,8 +572,8 @@ class XbmcPlugin(AbstractPlugin):
             path = parts.path.rstrip('/')
 
             if path != PATHS.PLAY:
-                log_action = 'Redirect queued'
-                action = context.create_uri(
+                log_operation = 'Redirect queued'
+                operation = context.create_uri(
                     (PATHS.ROUTE, path or PATHS.HOME),
                     params,
                     run=True,
@@ -579,8 +581,8 @@ class XbmcPlugin(AbstractPlugin):
                 result = False
 
             elif params.get(ACTION, [None])[0] == 'list':
-                log_action = 'Redirect for listing queued'
-                action = context.create_uri(
+                log_operation = 'Redirect for listing queued'
+                operation = context.create_uri(
                     (PATHS.ROUTE, path),
                     params,
                     run=True,
@@ -588,24 +590,24 @@ class XbmcPlugin(AbstractPlugin):
                 result = False
 
             else:
-                log_action = 'Redirect for playback queued'
-                action = context.create_uri(
+                log_operation = 'Redirect for playback queued'
+                operation = context.create_uri(
                     path,
                     params,
                     play=(xbmc.PLAYLIST_MUSIC
                           if (context.get_ui().get_property(PLAY_FORCE_AUDIO)
-                              or context.get_settings().audio_only()) else
+                              or context.settings().audio_only()) else
                           xbmc.PLAYLIST_VIDEO),
                 )
                 result = True
 
         else:
-            action = None
+            operation = None
             result = False
-            return result, action
+            return result, operation
 
-        logging.debug('{action}: {uri!r}',
-                      action=log_action,
+        logging.debug('{operation}: {uri!r}',
+                      operation=log_operation,
                       uri=log_uri,
                       stacklevel=2)
-        return result, action
+        return result, operation
