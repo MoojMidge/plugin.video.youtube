@@ -490,13 +490,25 @@ class XbmcContextUI(AbstractContextUI):
         else:
             log_msg = 'Set property {property_id!r}: {value!r}'
             log_value = log_redact or value
+
+        if process:
+            try:
+                value = process(value)
+            except Exception:
+                log_msg = ('Processing failed - {process}', log_msg)
+                cls.log.exception(log_msg,
+                                  process=process,
+                                  property_id=property_id,
+                                  value=log_value,
+                                  stacklevel=stacklevel)
+                return None
+
         cls.log.debug_trace(log_msg,
                             property_id=property_id,
                             value=log_value,
                             stacklevel=stacklevel)
+
         _property_id = property_id if raw else '-'.join((ADDON_ID, property_id))
-        if process:
-            value = process(value)
         xbmcgui.Window(10000).setProperty(_property_id, value)
         return value
 
@@ -511,19 +523,38 @@ class XbmcContextUI(AbstractContextUI):
                      default=False):
         _property_id = property_id if raw else '-'.join((ADDON_ID, property_id))
         value = xbmcgui.Window(10000).getProperty(_property_id)
+
         if log_redact is True:
             log_msg = 'Get property {property_id!r}: {value!p}'
             log_value = value
+            log_redact = None
         else:
             log_msg = 'Get property {property_id!r}: {value!r}'
             log_value = log_redact or value
+
+        if process:
+            try:
+                value = process(value)
+                log_value = log_redact or value
+            except Exception:
+                log_msg = ('Processing failed - {process}', log_msg)
+                cls.log.exception(log_msg,
+                                  process=process,
+                                  property_id=property_id,
+                                  value=log_value,
+                                  stacklevel=stacklevel)
+                return None
+
         cls.log.debug_trace(log_msg,
                             property_id=property_id,
                             value=log_value,
                             stacklevel=stacklevel)
-        if process:
-            value = process(value)
-        return BOOL_FROM_STR.get(value, default) if as_bool else value
+
+        if as_bool:
+            if default is None:
+                default = value
+            return BOOL_FROM_STR.get(value, default)
+        return value
 
     @classmethod
     def pop_property(cls,
@@ -539,19 +570,38 @@ class XbmcContextUI(AbstractContextUI):
         value = window.getProperty(_property_id)
         if value:
             window.clearProperty(_property_id)
-            if process:
-                value = process(value)
+
         if log_redact is True:
             log_msg = 'Pop property {property_id!r}: {value!p}'
             log_value = value
+            log_redact = None
         else:
             log_msg = 'Pop property {property_id!r}: {value!r}'
             log_value = log_redact or value
+
+        if process:
+            try:
+                value = process(value)
+                log_value = log_redact or value
+            except Exception:
+                log_msg = ('Processing failed - {process}', log_msg)
+                cls.log.exception(log_msg,
+                                  process=process,
+                                  property_id=property_id,
+                                  value=log_value,
+                                  stacklevel=stacklevel)
+                return None
+
         cls.log.debug_trace(log_msg,
                             property_id=property_id,
                             value=log_value,
                             stacklevel=stacklevel)
-        return BOOL_FROM_STR.get(value, default) if as_bool else value
+
+        if as_bool:
+            if default is None:
+                default = value
+            return BOOL_FROM_STR.get(value, default)
+        return value
 
     @classmethod
     def clear_property(cls, property_id, stacklevel=2, raw=False):
