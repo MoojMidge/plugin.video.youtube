@@ -94,7 +94,14 @@ def _process_remove(provider, context, client):
         time_ms=2500,
         audible=False,
     )
-    return True, {provider.FORCE_REFRESH: True}
+    return (
+        True,
+        {
+            provider.FORCE_REFRESH: context.is_plugin_folder(
+                PATHS.SUBSCRIPTIONS,
+            ),
+        },
+    )
 
 
 def process(provider, context, re_match):

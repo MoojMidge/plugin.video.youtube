@@ -271,8 +271,14 @@ class XbmcPlugin(AbstractPlugin):
         if play_cancelled:
             result = None
 
+        force_refresh = options.get(provider.FORCE_REFRESH)
         force_resolve = options.get(provider.FORCE_RESOLVE)
-        force_return = options.get(provider.FORCE_RETURN)
+        force_return = (
+            options.get(provider.FORCE_RETURN)
+            if force_refresh is None else
+            True
+        )
+
         result_item = None
         result_item_type = None
         items = None
@@ -378,7 +384,23 @@ class XbmcPlugin(AbstractPlugin):
                 ui.clear_property(param)
 
             fallback = options.get(provider.FALLBACK, not force_return)
-            if isinstance(fallback, string_type) and fallback != uri:
+            if force_refresh:
+                _post_run_operation = (
+                    context.send_notification,
+                    {
+                        'method': REFRESH_CONTAINER,
+                        'data': {
+                            'target': (
+                                force_refresh
+                                if isinstance(force_refresh, string_type) else
+                                None
+                            ),
+                        },
+                    },
+                )
+            elif not fallback:
+                pass
+            elif isinstance(fallback, string_type) and fallback != uri:
                 if options.get(provider.POST_RUN):
                     _, _post_run_operation = self.uri_operation(
                         context,
@@ -399,48 +421,39 @@ class XbmcPlugin(AbstractPlugin):
                         forced=False,
                         is_same_path=False,
                     )
-            elif fallback:
-                if play_cancelled:
-                    _, _post_run_operation = self.uri_operation(context, uri)
-                elif is_play_path:
-                    context.send_notification(
-                        PLAYBACK_FAILED,
-                        {VIDEO_ID: context.get_param(VIDEO_ID)},
-                    )
-                    # May not prevent the playback attempt from occurring and
-                    # subsequently failing
-                    item = xbmcgui.ListItem()
-                    item.setContentLookup(False)
-                    item.setProperties({
-                        'isPlayable': 'false',
-                    })
-                    xbmcplugin.setResolvedUrl(
-                        handle,
-                        succeeded=False,
-                        listitem=item,
-                    )
-                elif options.get(provider.FORCE_REFRESH):
-                    _post_run_operation = (
-                        context.send_notification,
-                        {
-                            'method': REFRESH_CONTAINER,
-                        },
-                    )
-                else:
-                    if context.is_plugin_folder():
-                        _, _post_run_operation = self.uri_operation(
-                            context,
-                            context.get_parent_uri(params={
-                                WINDOW_FALLBACK: True,
-                                WINDOW_REPLACE: True,
-                                WINDOW_RETURN: False,
-                            }),
-                        )
-                    else:
-                        _, _post_run_operation = self.uri_operation(
-                            context,
-                            'command://Action(Back)',
-                        )
+            elif play_cancelled:
+                _, _post_run_operation = self.uri_operation(context, uri)
+            elif is_play_path:
+                context.send_notification(
+                    PLAYBACK_FAILED,
+                    {VIDEO_ID: context.get_param(VIDEO_ID)},
+                )
+                # May not prevent the playback attempt from occurring and
+                # subsequently failing
+                item = xbmcgui.ListItem()
+                item.setContentLookup(False)
+                item.setProperties({
+                    'isPlayable': 'false',
+                })
+                xbmcplugin.setResolvedUrl(
+                    handle,
+                    succeeded=False,
+                    listitem=item,
+                )
+            elif context.is_plugin_folder():
+                _, _post_run_operation = self.uri_operation(
+                    context,
+                    context.get_parent_uri(params={
+                        WINDOW_FALLBACK: True,
+                        WINDOW_REPLACE: True,
+                        WINDOW_RETURN: False,
+                    }),
+                )
+            else:
+                _, _post_run_operation = self.uri_operation(
+                    context,
+                    'command://Action(Back)',
+                )
             if _post_run_operation:
                 post_run_operations.append(_post_run_operation)
                 _post_run_operation = None
