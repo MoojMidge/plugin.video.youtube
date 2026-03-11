@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from ...kodion import KodionException
-from ...kodion.constants import URI, VIDEO_ID
+from ...kodion.constants import PATHS, URI, VIDEO_ID
 from ...kodion.items import menu_items
 
 
@@ -98,11 +98,20 @@ def _process_rate_video(provider,
             audible=False,
         )
 
+    if response:
+        return (
+            True,
+            {
+                provider.FORCE_REFRESH: context.is_plugin_folder((
+                    PATHS.DISLIKED_VIDEOS,
+                    PATHS.LIKED_VIDEOS,
+                )),
+            },
+        )
     return (
-        True,
+        False,
         {
-            # this will be set if we are in the 'Liked Video' playlist
-            provider.FORCE_REFRESH: response and context.refresh_requested(),
+            provider.FORCE_RETURN: True,
         },
     )
 
@@ -133,7 +142,6 @@ def _process_more_for_video(provider, context):
         return (
             False,
             {
-                provider.FALLBACK: False,
                 provider.FORCE_RETURN: True,
             },
         )
