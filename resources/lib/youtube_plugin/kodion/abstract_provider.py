@@ -49,7 +49,7 @@ class AbstractProvider(object):
     CACHE_TO_DISC = 'provider_cache_to_disc'  # type: bool
     FALLBACK = 'provider_fallback'  # type: bool | str
     FORCE_PLAY = 'provider_force_play'  # type: bool
-    FORCE_REFRESH = 'provider_force_refresh'  # type: bool
+    FORCE_REFRESH = 'provider_force_refresh'  # type: bool | str
     FORCE_RESOLVE = 'provider_force_resolve'  # type: bool
     FORCE_RETURN = 'provider_force_return'  # type: bool
     POST_RUN = 'provider_post_run'  # type: bool
@@ -447,7 +447,14 @@ class AbstractProvider(object):
             ui.show_notification(localize('removed.name.x', query),
                                  time_ms=2500,
                                  audible=False)
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.SEARCH,
+                    ),
+                },
+            )
 
         if command == 'rename':
             query = params.get('q', '')
@@ -459,7 +466,14 @@ class AbstractProvider(object):
 
             search_history.del_item(query)
             search_history.add_item(new_query)
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.SEARCH,
+                    ),
+                },
+            )
 
         if command == 'clear':
             if not ui.on_yes_no_input(
@@ -472,7 +486,14 @@ class AbstractProvider(object):
             ui.show_notification(localize('completed'),
                                  time_ms=2500,
                                  audible=False)
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.SEARCH,
+                    ),
+                },
+            )
 
         if command == 'links':
             return provider.on_specials_x(
