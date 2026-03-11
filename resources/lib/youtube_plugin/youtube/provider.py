@@ -1327,7 +1327,14 @@ class Provider(AbstractProvider):
                 time_ms=2500,
                 audible=False,
             )
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.HISTORY,
+                    ),
+                },
+            )
 
         video_id = params.get(VIDEO_ID)
         if not video_id:
@@ -1347,7 +1354,14 @@ class Provider(AbstractProvider):
                 time_ms=2500,
                 audible=False,
             )
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.HISTORY,
+                    ),
+                },
+            )
 
         play_data = playback_history.get_item(video_id)
         if play_data:
@@ -1384,7 +1398,14 @@ class Provider(AbstractProvider):
             play_data['played_percent'] = 0
 
         playback_history_method(video_id, play_data)
-        return True, {provider.FORCE_REFRESH: True}
+        return (
+            True,
+            {
+                provider.FORCE_REFRESH: context.is_plugin_folder(
+                    PATHS.HISTORY,
+                ),
+            },
+        )
 
     @staticmethod
     def on_root(provider, context, re_match):
@@ -1994,7 +2015,14 @@ class Provider(AbstractProvider):
                 time_ms=2500,
                 audible=False,
             )
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.BOOKMARKS,
+                    ),
+                },
+            )
 
         item_id = params.get('item_id')
 
@@ -2053,7 +2081,14 @@ class Provider(AbstractProvider):
                 time_ms=2500,
                 audible=False,
             )
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.BOOKMARKS,
+                    ),
+                },
+            )
 
         if not item_id:
             return False, None
@@ -2092,7 +2127,14 @@ class Provider(AbstractProvider):
                 time_ms=2500,
                 audible=False,
             )
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.BOOKMARKS,
+                    ),
+                },
+            )
 
         return False, None
 
@@ -2158,7 +2200,14 @@ class Provider(AbstractProvider):
                 time_ms=2500,
                 audible=False,
             )
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.WATCH_LATER,
+                    ),
+                },
+            )
 
         video_id = params.get(VIDEO_ID)
         if not video_id:
@@ -2191,7 +2240,14 @@ class Provider(AbstractProvider):
                 time_ms=2500,
                 audible=False,
             )
-            return True, {provider.FORCE_REFRESH: True}
+            return (
+                True,
+                {
+                    provider.FORCE_REFRESH: context.is_plugin_folder(
+                        PATHS.WATCH_LATER,
+                    ),
+                },
+            )
 
         return False, None
 
