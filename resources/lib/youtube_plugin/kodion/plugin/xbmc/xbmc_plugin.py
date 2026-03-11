@@ -92,6 +92,7 @@ class XbmcPlugin(AbstractPlugin):
             context,
             forced=False,
             is_same_path=False,
+            refresh_target=None,
             **kwargs):
         handle = context.get_handle()
         ui = context.get_ui()
@@ -239,7 +240,22 @@ class XbmcPlugin(AbstractPlugin):
                 logging.exception('Error')
                 ui.on_ok('Error in ContentProvider', exc.__str__())
 
-        if not ui.pop_property(REFRESH_CONTAINER, as_bool=True) and forced:
+        if refresh_target == uri:
+            refresh_target = None
+            ui.clear_property(REFRESH_CONTAINER)
+            if not context.refresh_requested():
+                post_run_operations.append((
+                    context.send_notification,
+                    {
+                        'method': REFRESH_CONTAINER,
+                        'data': {'target': uri},
+                    },
+                ))
+        elif refresh_target is True:
+            ui.clear_property(REFRESH_CONTAINER)
+        else:
+            refresh_target = None
+        if not refresh_target and forced:
             played_video_id = context.pop_global(PLAYER_VIDEO_ID)
             if played_video_id:
                 focused_video_id = None
