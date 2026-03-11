@@ -26,6 +26,7 @@ from ...constants import (
     CONTAINER_POSITION,
     CURRENT_CONTAINER_INFO,
     CURRENT_ITEM,
+    FOLDER_URI,
     HAS_FILES,
     HAS_FOLDERS,
     HAS_PARENT,
@@ -189,30 +190,46 @@ class XbmcContextUI(AbstractContextUI):
     def on_busy():
         return XbmcBusyDialog()
 
-    def refresh_container(self, force=False, stacklevel=None):
-        if force:
-            if self.get_property(REFRESH_CONTAINER) == BUSY_FLAG:
-                self.set_property(REFRESH_CONTAINER)
-                xbmc.executebuiltin('Container.Refresh')
-            return True
-
+    def refresh_container(self, force=False, target=None, stacklevel=None):
         stacklevel = 2 if stacklevel is None else stacklevel + 1
 
-        container = self.get_container()
+        container = self.get_container(stacklevel=stacklevel)
         if not container['is_plugin'] or not container['is_loaded']:
+            if target:
+                cancel = False
+                defer = target
+            else:
+                cancel = True
+                defer = False
+        elif not container['is_active']:
+            cancel = False
+            defer = target or BUSY_FLAG
+        elif target and target != container[FOLDER_URI]:
+            cancel = False
+            defer = target
+        else:
+            cancel = False
+            defer = False
+
+        if cancel:
             self.log.debug('No plugin container loaded - cancelling refresh',
                            stacklevel=stacklevel)
             return False
 
-        if container['is_active']:
-            self.set_property(REFRESH_CONTAINER)
-            xbmc.executebuiltin('Container.Refresh')
-            return True
+        if force:
+            target = self.get_property(REFRESH_CONTAINER, stacklevel=stacklevel)
+            if target == BUSY_FLAG or target == container[FOLDER_URI]:
+                defer = False
 
-        self.set_property(REFRESH_CONTAINER, BUSY_FLAG)
-        self.log.debug('Plugin container not active - deferring refresh',
-                       stacklevel=stacklevel)
-        return None
+        if defer:
+            self.set_property(REFRESH_CONTAINER, defer, stacklevel=stacklevel)
+            self.log.debug('Plugin container not active - deferring refresh',
+                           stacklevel=stacklevel)
+            return None
+
+        self.set_property(REFRESH_CONTAINER, stacklevel=stacklevel)
+        xbmc.executebuiltin('Container.Refresh')
+        return True
 
     def focus_container(self, container_id=None, position=None):
         if position is None:
@@ -324,6 +341,11 @@ class XbmcContextUI(AbstractContextUI):
         return {
             'is_plugin': is_plugin,
             'id': container_id,
+            FOLDER_URI: self.get_container_info(
+                FOLDER_URI,
+                _container_id,
+                stacklevel=stacklevel,
+            ),
             'is_active': is_active,
             'is_loaded': is_loaded,
         }
