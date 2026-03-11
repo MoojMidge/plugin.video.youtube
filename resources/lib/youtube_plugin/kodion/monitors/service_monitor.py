@@ -109,10 +109,14 @@ class ServiceMonitor(xbmc.Monitor):
                         'message': method,
                         'data': data or True})
 
-    def refresh_container(self, force=False):
-        if force:
+    def refresh_container(self, force=False, target=None):
+        if force or target:
             self.refresh = False
-        refreshed = self._context.get_ui().refresh_container(force=force)
+        refreshed = self._context.get_ui().refresh_container(
+            force=force,
+            target=target,
+            stacklevel=3,
+        )
         if refreshed is None:
             self.refresh = True
 
@@ -350,7 +354,9 @@ class ServiceMonitor(xbmc.Monitor):
                 self.send_notification(SERVICE_IPC, data)
 
         elif event == REFRESH_CONTAINER:
-            self.refresh_container()
+            self.refresh_container(
+                target=data.get('target') if isinstance(data, dict) else None,
+            )
 
         elif event == CONTAINER_FOCUS:
             if not data or not isinstance(data, dict):
