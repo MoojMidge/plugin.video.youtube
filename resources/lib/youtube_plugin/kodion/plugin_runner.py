@@ -19,6 +19,7 @@ from .constants import (
     FOLDER_URI,
     FORCE_PLAY_PARAMS,
     PATHS,
+    REFRESH_CONTAINER,
     TRAKT_PAUSE_FLAG,
 )
 from .context import XbmcContext
@@ -103,6 +104,14 @@ def run(context=_context,
     else:
         forced = False
 
+    refresh_target = ui.get_property(
+        REFRESH_CONTAINER,
+        as_bool=True,
+        default=None,
+    )
+    # if refresh_target is True or refresh_target == context.get_uri():
+    #     refresh = context.refresh_requested(force=True, on=True, params=params)
+    #     new_params['refresh'] = refresh if refresh else 0
     if forced:
         refresh = context.refresh_requested(force=True, off=True, params=params)
         new_params['refresh'] = refresh if refresh else 0
@@ -134,6 +143,7 @@ def run(context=_context,
                    context,
                    forced=forced,
                    is_same_path=is_same_path,
+                   refresh_target=refresh_target,
                    **new_kwargs)
     except Exception:
         log.exception('Error')
