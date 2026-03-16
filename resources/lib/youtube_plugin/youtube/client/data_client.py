@@ -44,7 +44,7 @@ class YouTubeDataClient(YouTubeLoginClient):
     log = logging.getLogger(__name__)
 
     _max_results = 50
-    _VIRTUAL_LISTS = frozenset(('WL', 'LL', 'HL'))
+    VIRTUAL_LISTS = frozenset(('WL', 'LL', 'HL'))
     JSON_PATHS = {
         'tv_grid': {
             'items': (
@@ -547,25 +547,21 @@ class YouTubeDataClient(YouTubeLoginClient):
                                 no_content=True,
                                 **kwargs)
 
-    def rate_playlist(self, playlist_id, rating='like', **kwargs):
-        if rating == 'like':
-            post_data = {
-                'status': 'LIKE',
-                'target': {
-                    'playlistId': playlist_id,
-                },
-            }
-            path = 'like/like'
+    def rate_playlist(self, playlist_id, like=None, rating='like', **kwargs):
+        if like or rating == 'like':
+            rating = 'LIKE'
+            like_playlist_path = 'like/like'
         else:
-            post_data = {
-                'status': 'INDIFFERENT',
-                'target': {
-                    'playlistId': playlist_id,
-                },
-            }
-            path = 'like/removelike'
+            rating = 'INDIFFERENT'
+            like_playlist_path = 'like/removelike'
 
-        return self.api_request('tv', 'POST', path=path,
+        post_data = {
+            'status': rating,
+            'target': {
+                'playlistId': playlist_id,
+            },
+        }
+        return self.api_request('tv', 'POST', path=like_playlist_path,
                                 post_data=post_data,
                                 do_auth=True,
                                 **kwargs)
@@ -575,7 +571,7 @@ class YouTubeDataClient(YouTubeLoginClient):
             return False
 
         playlist_id_upper = playlist_id.upper()
-        if playlist_id_upper not in self._VIRTUAL_LISTS:
+        if playlist_id_upper not in self.VIRTUAL_LISTS:
             params = {
                 'part': 'snippet',
                 'mine': True,
@@ -590,13 +586,15 @@ class YouTubeDataClient(YouTubeLoginClient):
                     },
                 },
             }
+            position = kwargs.pop('playlist_position', None)
+            if position is not None:
+                post_data['snippet']['position'] = position
             return self.api_request(method='POST', path='playlistItems',
                                     params=params,
                                     post_data=post_data,
                                     **kwargs)
 
         if playlist_id_upper == 'WL':
-            self._context.get_watch_later_list().add_item(video_id)
             post_data = {
                 'playlistId': playlist_id_upper,
                 'actions': [{
@@ -605,12 +603,21 @@ class YouTubeDataClient(YouTubeLoginClient):
                     'action': 'ACTION_ADD_VIDEO',
                 }],
             }
-            path = 'browse/edit_playlist'
+            add_video_path = 'browse/edit_playlist'
+
+        elif playlist_id_upper == 'LL':
+            post_data = {
+                'status': 'LIKE',
+                'target': {
+                    'videoId': video_id,
+                },
+            }
+            add_video_path = 'like/like'
 
         else:
             return False
 
-        return self.api_request('tv', 'POST', path=path,
+        return self.api_request('tv', 'POST', path=add_video_path,
                                 post_data=post_data,
                                 do_auth=True,
                                 **kwargs)
@@ -624,7 +631,7 @@ class YouTubeDataClient(YouTubeLoginClient):
             return False
 
         playlist_id_upper = playlist_id.upper()
-        if playlist_id_upper not in self._VIRTUAL_LISTS:
+        if playlist_id_upper not in self.VIRTUAL_LISTS:
             if not playlist_item_id and video_id:
                 playlist_item_id = self.get_playlist_item_id_of_video_id(
                     playlist_id=playlist_id,
@@ -655,20 +662,21 @@ class YouTubeDataClient(YouTubeLoginClient):
                     'action': 'ACTION_REMOVE_VIDEO_BY_VIDEO_ID',
                 }],
             }
-            path = 'browse/edit_playlist'
+            remove_video_path = 'browse/edit_playlist'
 
         elif playlist_id_upper == 'LL':
             post_data = {
+                'status': 'INDIFFERENT',
                 'target': {
                     'videoId': video_id,
                 },
             }
-            path = 'like/removelike'
+            remove_video_path = 'like/removelike'
 
         else:
             return False
 
-        return self.api_request('tv', 'POST', path=path,
+        return self.api_request('tv', 'POST', path=remove_video_path,
                                 post_data=post_data,
                                 do_auth=True,
                                 **kwargs)
@@ -1150,7 +1158,7 @@ class YouTubeDataClient(YouTubeLoginClient):
                            max_results=None,
                            **kwargs):
         playlist_id_upper = playlist_id.upper()
-        if playlist_id_upper not in self._VIRTUAL_LISTS:
+        if playlist_id_upper not in self.VIRTUAL_LISTS:
             params = {
                 'part': 'snippet',
                 'maxResults': (
