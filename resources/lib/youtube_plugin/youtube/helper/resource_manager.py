@@ -420,40 +420,37 @@ class ResourceManager(object):
         to_update = []
         result = {}
         for playlist_id in ids:
-            page_token = page_token or 0
+            _page_token = page_token or 0
             while 1:
-                batch_id = (playlist_id, page_token)
+                batch_id = (playlist_id, _page_token)
                 batch_ids.append(batch_id)
-                if refresh:
-                    batch = None
-                else:
-                    batch = data_cache.get_item(
-                        '{0},{1}'.format(*batch_id),
-                        as_dict=True,
-                    )
-                if not batch:
+
+                batch = None if refresh else data_cache.get_item(
+                    '%s,%s' % batch_id,
+                    as_dict=True,
+                )
+                if batch:
+                    age = batch.get('age')
+                    batch = batch.get('value')
+                    _page_token = batch.get('nextPageToken')
+                if not batch or not batch.get('items'):
                     if not forced_cache:
                         to_update.append(batch_id)
                     break
-                age = batch.get('age')
-                batch = batch.get('value')
-                if not batch:
+
+                if forced_cache:
+                    result[batch_id] = batch
+                elif (age <= (
+                        data_cache.ONE_DAY
+                        if page_token and _page_token else
+                        data_cache.ONE_MINUTE * 15
+                )):
+                    result[batch_id] = batch
+                else:
                     to_update.append(batch_id)
                     break
-                elif forced_cache:
-                    result[batch_id] = batch
-                elif page_token:
-                    if age <= data_cache.ONE_DAY:
-                        result[batch_id] = batch
-                    else:
-                        to_update.append(batch_id)
-                        break
-                else:
-                    if age <= data_cache.ONE_MINUTE * 5:
-                        result[batch_id] = batch
-                    else:
-                        to_update.append(batch_id)
-                page_token = batch.get('nextPageToken') if fetch_next else None
+
+                page_token = _page_token if fetch_next else None
                 if not page_token:
                     break
 
