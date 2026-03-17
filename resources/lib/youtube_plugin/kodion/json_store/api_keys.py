@@ -166,10 +166,10 @@ class APIKeyStore(JSONStore):
 
     def get_configs(self):
         return {
+            'dev': self.get_api_keys('developer'),
             'tv': self.get_api_keys('youtube-tv'),
             'user': self.get_api_keys(self.get_current_switch()),
             'vr': self.get_api_keys('youtube-vr'),
-            'dev': self.get_api_keys('developer'),
         }
 
     def get_developer_config(self, developer_id):

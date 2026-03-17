@@ -470,7 +470,6 @@ class AccessManager(JSONStore):
         if expiry_timestamp > int(time.time()):
             num_access_tokens = len([1 for token in access_tokens if token])
         else:
-            access_tokens = [None, None, None, None]
             num_access_tokens = 0
         return access_tokens, num_access_tokens, expiry_timestamp
 

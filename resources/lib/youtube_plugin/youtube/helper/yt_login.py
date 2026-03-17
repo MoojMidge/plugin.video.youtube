@@ -71,7 +71,7 @@ def _do_login(provider, context, client=None, **kwargs):
         refresh_tokens,
         num_refresh_tokens,
     ) = access_manager.get_refresh_tokens()
-    token_types = ['tv', 'user', 'vr', 'dev']
+    token_types = list(client.CLIENT_TYPES)
     new_access_tokens = dict.fromkeys(token_types, None)
     for token_idx, token_type in enumerate(token_types):
         try:
