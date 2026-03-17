@@ -3050,10 +3050,8 @@ class YouTubeDataClient(YouTubeLoginClient):
 
     @classmethod
     def v3_api_available(cls):
-        user_config = cls._configs.get('user')
-        if user_config:
-            return bool(user_config.get('key'))
-        return False
+        api_keys = cls._api_keys
+        return api_keys and bool(api_keys.get('user'))
 
     def _auth_required(self, params):
         if params:
@@ -3231,21 +3229,8 @@ class YouTubeDataClient(YouTubeLoginClient):
                 abort_prompt = 'sign.multi.title'
             client_data.setdefault('_auth_required', do_auth)
 
-        client_data['_access_tokens'] = access_tokens = {}
-        client_data['_api_keys'] = api_keys = {}
-        for config_type, config in self._configs.items():
-            if not config:
-                continue
-
-            key = config.get('key')
-            if key:
-                api_keys[config_type] = key
-
-            if not config.get('token-allowed', True):
-                continue
-            access_token = self._access_tokens.get(config_type)
-            if access_token:
-                access_tokens[config_type] = access_token
+        client_data['_access_tokens'] = self._access_tokens
+        client_data['_api_keys'] = self._api_keys
 
         _client = self.build_client(client, client_data)
         if _client:

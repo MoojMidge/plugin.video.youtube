@@ -29,6 +29,8 @@ class YouTubeRequestClient(BaseRequestsClass):
         'testsuite': '2AMB',
     }
 
+    CLIENT_TYPES = ('tv', 'user', 'vr', 'dev')
+
     BASE_URL = 'https://www.youtube.com'
     BASE_URL_MOBILE = 'https://m.youtube.com'
     V1_API_URL = BASE_URL + '/youtubei/v1/{_endpoint}'
@@ -700,18 +702,8 @@ class YouTubeRequestClient(BaseRequestsClass):
             'cache': False,
         },
         '_common': {
-            '_access_tokens': {
-                'dev': None,
-                'tv': None,
-                'user': None,
-                'vr': None,
-            },
-            '_api_keys': {
-                'dev': None,
-                'tv': None,
-                'user': None,
-                'vr': None,
-            },
+            '_access_tokens': dict.fromkeys(CLIENT_TYPES, None),
+            '_api_keys': dict.fromkeys(CLIENT_TYPES, None),
             'json': {
                 'contentCheckOk': True,
                 'context': {

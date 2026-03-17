@@ -1029,14 +1029,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             'method': 'GET',
             '_auth_requested': auth_requested,
             '_auth_type': auth_type,
-            '_access_tokens': {
-                'user': (self._access_tokens.get('user')
-                         if (self._configs.get('user', {})
-                             .get('token-allowed', True)) else
-                         None),
-                'tv': self._access_tokens.get('tv'),
-                'vr': self._access_tokens.get('vr'),
-            },
+            '_access_tokens': self._access_tokens,
             '_signature_timestamp': self._signature_timestamp,
             '_visitor_data': self._visitor_data[self._visitor_data_key]
         }
@@ -1763,14 +1756,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             },
             'url': self.V1_API_URL,
             'method': 'POST',
-            '_access_tokens': {
-                'user': (self._access_tokens.get('user')
-                         if (self._configs.get('user', {})
-                             .get('token-allowed', True)) else
-                         None),
-                'tv': self._access_tokens.get('tv'),
-                'vr': self._access_tokens.get('vr'),
-            },
+            '_access_tokens': self._access_tokens,
             '_endpoint': 'player',
             '_cpn': None,
             '_signature_timestamp': signature_timestamp,
