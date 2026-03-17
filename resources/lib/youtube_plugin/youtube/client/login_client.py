@@ -21,29 +21,18 @@ class YouTubeLoginClient(YouTubeRequestClient):
     DEVICE_CODE_URL = 'https://accounts.google.com/o/oauth2/device/code'
     REVOKE_URL = 'https://accounts.google.com/o/oauth2/revoke'
     TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
-    TOKEN_TYPES = {
-        0: 'tv',
-        'tv': 0,
-        1: 'user',
-        'user': 1,
-        2: 'vr',
-        'vr': 2,
-        3: 'dev',
-        'dev': 3,
-    }
 
-    _configs = {
-        'dev': {},
-        'user': {},
-        'tv': {},
-        'vr': {},
-    }
-    _access_tokens = {
-        'dev': None,
-        'user': None,
-        'tv': None,
-        'vr': None,
-    }
+    TOKEN_TYPES_MAP = {}
+    _configs = {}
+    _access_tokens = {}
+    _api_keys = {}
+    for token_idx, client_type in enumerate(YouTubeRequestClient.CLIENT_TYPES):
+        TOKEN_TYPES_MAP[token_idx] = client_type
+        TOKEN_TYPES_MAP[client_type] = token_idx
+        _configs[client_type] = {}
+        _access_tokens[client_type] = None
+        _api_keys[client_type] = None
+
     _initialised = False
     _logged_in = False
 
@@ -61,12 +50,16 @@ class YouTubeLoginClient(YouTubeRequestClient):
 
     @classmethod
     def init(cls, configs=None, **_kwargs):
-        _configs = cls._configs
         if not configs:
             return
+
+        _api_keys = cls._api_keys
+        _configs = cls._configs
         for config_type, config in configs.items():
-            if config_type in _configs:
-                _configs[config_type] = config
+            if config_type not in _configs:
+                continue
+            config = _configs[config_type] = config or {}
+            _api_keys[config_type] = config.get('key')
 
     def reinit(self, **kwargs):
         super(YouTubeLoginClient, self).reinit(**kwargs)
@@ -80,14 +73,14 @@ class YouTubeLoginClient(YouTubeRequestClient):
             access_tokens = cls._access_tokens
         if to_dict or isinstance(access_tokens, (list, tuple)):
             access_tokens = {
-                cls.TOKEN_TYPES[token_idx]: token
+                cls.TOKEN_TYPES_MAP[token_idx]: token
                 for token_idx, token in enumerate(access_tokens)
-                if token and token_idx in cls.TOKEN_TYPES
+                if token and token_idx in cls.TOKEN_TYPES_MAP
             }
         elif to_list or isinstance(access_tokens, dict):
-            _access_tokens = [None, None, None, None]
+            _access_tokens = [None] * len(cls.CLIENT_TYPES)
             for token_type, token in access_tokens.items():
-                token_idx = cls.TOKEN_TYPES.get(token_type)
+                token_idx = cls.TOKEN_TYPES_MAP.get(token_type)
                 if token_idx is None:
                     continue
                 _access_tokens[token_idx] = token
@@ -105,11 +98,14 @@ class YouTubeLoginClient(YouTubeRequestClient):
             token_status = 0
             for token_type, token in existing_access_tokens.items():
                 if token_type in access_tokens:
-                    token = access_tokens[token_type]
-                    existing_access_tokens[token_type] = token
+                    config = self._configs.get(token_type)
+                    if config and config.get('token-allowed', True):
+                        token = access_tokens[token_type]
+                    else:
+                        token = None
                 else:
                     token = None
-                    existing_access_tokens[token_type] = None
+                existing_access_tokens[token_type] = token
                 if token:
                     token_status |= 2
                 elif token_type != 'dev':
@@ -181,7 +177,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
         )
 
     def refresh_token(self, token_type, refresh_token=None):
-        login_type = self.TOKEN_TYPES.get(token_type)
+        login_type = self.TOKEN_TYPES_MAP.get(token_type)
         config = self._configs.get(login_type)
         if config:
             client_id = config.get('id')
@@ -226,7 +222,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
         return json_data
 
     def request_access_token(self, token_type, code=None):
-        login_type = self.TOKEN_TYPES.get(token_type)
+        login_type = self.TOKEN_TYPES_MAP.get(token_type)
         config = self._configs.get(login_type)
         if config:
             client_id = config.get('id')
@@ -271,7 +267,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
         return json_data
 
     def request_device_and_user_code(self, token_type):
-        login_type = self.TOKEN_TYPES.get(token_type)
+        login_type = self.TOKEN_TYPES_MAP.get(token_type)
         config = self._configs.get(login_type)
         if config:
             client_id = config.get('id')
