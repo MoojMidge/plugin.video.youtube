@@ -530,13 +530,27 @@ class YouTubeDataClient(YouTubeLoginClient):
                                 do_auth=True,
                                 **kwargs)
 
-    def rate_video(self, video_id, rating='like', **kwargs):
+    def rate_video(self,
+                   video_id,
+                   like=None,
+                   dislike=None,
+                   rating='like',
+                   **kwargs):
         """
         Rate a video
-        :param video_id: if of the video
-        :param rating: [like|dislike|none]
+        :param str  video_id: id of the video to rate
+        :param bool like: Set rating to 'like'
+        :param bool dislike: Set rating to 'dislike'
+        :param str  rating: Acceptable values are: 'like', 'dislike' or 'none'
         :return:
         """
+        if like:
+            rating = 'like'
+        elif dislike:
+            rating = 'dislike'
+        elif rating != 'like' and rating != 'dislike':
+            rating = 'none'
+
         params = {
             'id': video_id,
             'rating': rating,
@@ -545,6 +559,41 @@ class YouTubeDataClient(YouTubeLoginClient):
                                 params=params,
                                 do_auth=True,
                                 no_content=True,
+                                **kwargs)
+
+    def rate_video_v1(self,
+                      video_id,
+                      like=None,
+                      dislike=None,
+                      rating='like',
+                      **kwargs):
+        """
+        Rate a video
+        :param str  video_id: id of the video to rate
+        :param bool like: Set rating to 'like'
+        :param bool dislike: Set rating to 'dislike'
+        :param str  rating: Acceptable values are: 'like', 'dislike' or 'none'
+        :return:
+        """
+        if like or rating == 'like':
+            rating = 'LIKE'
+            like_video_path = 'like/like'
+        elif dislike or rating == 'dislike':
+            rating = 'DISLIKE'
+            like_video_path = 'like/dislike'
+        else:
+            rating = 'INDIFFERENT'
+            like_video_path = 'like/removelike'
+
+        post_data = {
+            'status': rating,
+            'target': {
+                'videoId': video_id,
+            },
+        }
+        return self.api_request('tv', 'POST', path=like_video_path,
+                                post_data=post_data,
+                                do_auth=True,
                                 **kwargs)
 
     def rate_playlist(self, playlist_id, like=None, rating='like', **kwargs):
