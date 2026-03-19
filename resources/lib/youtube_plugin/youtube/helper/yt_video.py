@@ -80,7 +80,7 @@ def _process_rate_video(provider,
     notify_message = None
     response = None
     if result != -1:
-        response = client.rate_video(video_id, result)
+        response = client.rate_video_v1(video_id, rating=result)
         if response:
             if result == 'none':
                 notify_message = localize(('removed.x', 'rating'))
