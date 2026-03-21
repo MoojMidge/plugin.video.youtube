@@ -637,10 +637,6 @@ def update_video_items(provider, context, video_id_dict,
         return
 
     logged_in = provider.get_client(context).logged_in
-    if logged_in:
-        watch_later_id = context.get_access_manager().get_watch_later_id()
-    else:
-        watch_later_id = ''
 
     settings = context.settings()
     alternate_player = settings.support_alternative_player()
@@ -732,7 +728,7 @@ def update_video_items(provider, context, video_id_dict,
     cxm_queue = menu_items.media_queue(context)
     cxm_watch_later = menu_items.playlist_add_to(
         context,
-        watch_later_id,
+        'WL',
         'watch_later',
     )
     cxm_go_to_channel = menu_items.channel_go_to(context)
@@ -1086,7 +1082,7 @@ def update_video_items(provider, context, video_id_dict,
         # add 'Watch Later' only if we are not in my 'Watch Later' list
         if not available or in_watch_later_list:
             pass
-        elif watch_later_id:
+        elif logged_in:
             context_menu.append(cxm_watch_later)
         else:
             context_menu.append(
