@@ -660,9 +660,15 @@ class Provider(AbstractProvider):
         * PLAYLIST_ID: YouTube Playlist ID
         """
         playlist_id = re_match.group(PLAYLIST_ID)
+        playlist_id_upper = playlist_id.upper()
+        if playlist_id_upper == 'WL':
+            playlist_id = context.get_access_manager().get_watch_later_id()
+        elif playlist_id_upper == 'HL':
+            playlist_id = context.get_access_manager().get_watch_history_id()
         new_params = {
             PLAYLIST_ID: playlist_id,
         }
+
         channel_id = re_match.group(CHANNEL_ID)
         if channel_id:
             new_params[CHANNEL_ID] = channel_id
@@ -1539,9 +1545,10 @@ class Provider(AbstractProvider):
         if settings_bool(settings.SHOW_WATCH_LATER, True):
             if watch_later_id:
                 path = (
-                    (PATHS.VIRTUAL_PLAYLIST, watch_later_id)
-                    if watch_later_id.lower() == 'wl' else
-                    (PATHS.MY_PLAYLIST, watch_later_id)
+                    PATHS.VIRTUAL_PLAYLIST
+                    if watch_later_id.upper() == 'WL' else
+                    PATHS.MY_PLAYLIST,
+                    'WL',
                 )
                 watch_later_item = DirectoryItem(
                     localize('watch_later'),
@@ -1634,9 +1641,10 @@ class Provider(AbstractProvider):
         if settings_bool(settings.SHOW_HISTORY, True):
             if history_id:
                 path = (
-                    (PATHS.VIRTUAL_PLAYLIST, history_id)
-                    if history_id.lower() == 'hl' else
-                    (PATHS.MY_PLAYLIST, history_id)
+                    PATHS.VIRTUAL_PLAYLIST
+                    if history_id.upper() == 'HL' else
+                    PATHS.MY_PLAYLIST,
+                    'HL',
                 )
                 watch_history_item = DirectoryItem(
                     localize('history'),
