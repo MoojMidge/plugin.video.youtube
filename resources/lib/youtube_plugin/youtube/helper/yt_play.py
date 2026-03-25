@@ -167,7 +167,7 @@ def _play_stream(provider, context, video_id=None, reload=False):
         video_id=video_id,
     )
 
-    use_history = not (screensaver or incognito or stream.get('live'))
+    use_history = not screensaver and not incognito
     use_remote_history = use_history and settings.use_remote_history()
     use_local_history = use_history and settings.use_local_history()
 

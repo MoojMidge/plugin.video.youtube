@@ -107,22 +107,22 @@ class PlayerMonitorThread(object):
 
         client = provider.get_client(context)
         logged_in = client.logged_in
-        report_url = use_remote_history and playback_stats.get('playback_url')
-        state = 'playing'
-
-        if report_url:
+        if logged_in and use_remote_history:
             client.update_watch_history(
                 video_id,
-                report_url,
+                playback_stats.get('playback_url'),
             )
+            report_url = playback_stats.get('watchtime_url')
+        else:
+            report_url = None
 
         access_manager = context.get_access_manager()
         settings = context.settings()
         playlist_player = context.playlist_player()
 
         video_id_param = 'video_id=%s' % video_id
-        report_url = use_remote_history and playback_stats.get('watchtime_url')
 
+        state = 'playing'
         segment_start = 0.0
         report_time = -1.0
         wait_interval = 1
@@ -172,7 +172,7 @@ class PlayerMonitorThread(object):
                     state = 'playing'
                 report_time = played_time
 
-                if logged_in and report_url:
+                if report_url:
                     if state == 'playing':
                         segment_end = played_time
                     else:
@@ -205,54 +205,37 @@ class PlayerMonitorThread(object):
             monitor.waitForAbort(wait_interval)
             waited += wait_interval
 
-        self.current_time = player.current_time
-        self.total_time = player.total_time
-        if self.total_time > 0:
-            self.progress = int(100 * self.current_time / self.total_time)
-
-        if logged_in:
-            client = provider.get_client(context)
-            logged_in = client.logged_in
+        _current_time = self.current_time = player.current_time
+        _total_time = self.total_time = player.total_time
+        if _total_time > 0:
+            _progress = self.progress = int(100 * _current_time / _total_time)
+        else:
+            _progress = self.progress
 
         if self.status.get('live'):
-            play_count += 1
-            segment_end = self.current_time
-            play_data = {
-                'play_count': play_count,
-                'total_time': 0,
-                'played_time': 0,
-                'played_percent': 0,
-            }
-        else:
-            if self.progress >= settings.get_play_count_min_percent():
+            segment_end = _current_time
+            if _current_time > 180:
                 play_count += 1
-                self.current_time = 0
-                segment_end = self.total_time
+                watched = True
             else:
-                segment_end = self.current_time
-                refresh_only = True
-            play_data = {
-                'play_count': play_count,
-                'total_time': self.total_time,
-                'played_time': self.current_time,
-                'played_percent': self.progress,
-            }
+                watched = False
+            _total_time = 0
+            _progress = 0
+        elif _progress >= settings.get_play_count_min_percent():
+            segment_end = _total_time
+            play_count += 1
+            watched = True
+        else:
+            segment_end = _current_time
+            watched = False
+
+        play_data = {
+            'play_count': play_count,
+            'total_time': _total_time,
+            'played_time': _current_time,
+            'played_percent': _progress,
+        }
         self.player_data['play_data'] = play_data
-
-        if logged_in and report_url:
-            client.update_watch_history(
-                video_id,
-                report_url,
-                status=(
-                    segment_end,
-                    segment_end,
-                    segment_end,
-                    'stopped',
-                ),
-            )
-        if use_local_history:
-            context.get_playback_history().set_item(video_id, play_data)
-
         context.send_notification(PLAYBACK_STOPPED, self.player_data)
         log.debug('Playback stopped:'
                   ' {played_time:.3f} secs of {total_time:.3f}'
@@ -260,46 +243,65 @@ class PlayerMonitorThread(object):
                   ' played {play_count} time(s)',
                   **play_data)
 
+        if settings.get_bool(settings.PLAY_REFRESH):
+            context.send_notification(REFRESH_CONTAINER)
+
         if refresh_only:
-            pass
-        elif settings.get_bool(settings.WATCH_LATER_REMOVE, True):
-            watch_later_id = logged_in and access_manager.get_watch_later_id()
-            if not watch_later_id:
-                context.get_watch_later_list().del_item(video_id)
-            elif watch_later_id.lower() == 'wl':
+            self.end()
+            return
+
+        if use_local_history:
+            if watched or not _progress:
+                play_data['played_time'] = 0
+            context.get_playback_history().set_item(video_id, play_data)
+
+        if logged_in:
+            client = provider.get_client(context)
+            logged_in = client.logged_in
+            if logged_in and report_url:
+                client.update_watch_history(
+                    video_id,
+                    report_url,
+                    status=(
+                        segment_end,
+                        segment_end,
+                        segment_end,
+                        'stopped',
+                    ),
+                )
+
+        if not watched:
+            self.end()
+            return
+
+        wl_remove = settings.get_bool(settings.WATCH_LATER_REMOVE, True)
+
+        if logged_in:
+            history_id = access_manager.get_watch_history_id()
+            if history_id and history_id.upper() != 'HL':
                 provider.on_playlist_x(
+                    provider,
+                    context,
+                    command='add',
+                    category='video',
+                    playlist_id=history_id,
+                    video_id=video_id,
+                    confirmed=True,
+                )
+
+            if wl_remove:
+                success, _ = provider.on_playlist_x(
                     provider,
                     context,
                     command='remove',
                     category='video',
-                    playlist_id=watch_later_id,
+                    playlist_id='watch_later',
                     video_id=video_id,
                     video_name='',
                     confirmed=True,
                 )
-            else:
-                playlist_item_id = client.get_playlist_item_id_of_video_id(
-                    playlist_id=watch_later_id,
-                    video_id=video_id,
-                    do_auth=True,
-                )
-                if playlist_item_id:
-                    provider.on_playlist_x(
-                        provider,
-                        context,
-                        command='remove',
-                        category='video',
-                        playlist_id=watch_later_id,
-                        video_id=video_id,
-                        playlist_item_id=playlist_item_id,
-                        video_name='',
-                        confirmed=True,
-                    )
-
-        if logged_in and not refresh_only:
-            history_id = access_manager.get_watch_history_id()
-            if history_id and history_id.lower() != 'hl':
-                client.add_video_to_playlist(history_id, video_id)
+                if success:
+                    wl_remove = False
 
             new_rating = False
 
@@ -341,8 +343,8 @@ class PlayerMonitorThread(object):
                     new_rating=new_rating,
                 )
 
-        if settings.get_bool(settings.PLAY_REFRESH):
-            context.send_notification(REFRESH_CONTAINER)
+        if wl_remove:
+            context.get_watch_later_list().del_item(video_id)
 
         self.end()
 

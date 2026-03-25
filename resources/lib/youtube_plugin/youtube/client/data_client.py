@@ -571,6 +571,9 @@ class YouTubeDataClient(YouTubeLoginClient):
                                 **kwargs)
 
     def add_video_to_playlist(self, playlist_id, video_id, **kwargs):
+        if not playlist_id or not video_id:
+            return False
+
         playlist_id_upper = playlist_id.upper()
         if playlist_id_upper not in self._VIRTUAL_LISTS:
             params = {
@@ -614,11 +617,23 @@ class YouTubeDataClient(YouTubeLoginClient):
 
     def remove_video_from_playlist(self,
                                    playlist_id,
-                                   playlist_item_id,
                                    video_id,
+                                   playlist_item_id=None,
                                    **kwargs):
-        playlist_id_upper = playlist_id.upper() if playlist_id else ''
+        if not playlist_id:
+            return False
+
+        playlist_id_upper = playlist_id.upper()
         if playlist_id_upper not in self._VIRTUAL_LISTS:
+            if not playlist_item_id and video_id:
+                playlist_item_id = self.get_playlist_item_id_of_video_id(
+                    playlist_id=playlist_id,
+                    video_id=video_id,
+                    do_auth=True,
+                )
+            if not playlist_item_id:
+                return False
+
             params = {
                 'id': playlist_item_id,
             }
@@ -627,6 +642,9 @@ class YouTubeDataClient(YouTubeLoginClient):
                                     do_auth=True,
                                     no_content=True,
                                     **kwargs)
+
+        if not video_id:
+            return False
 
         if playlist_id_upper == 'WL':
             self._context.get_watch_later_list().del_item(video_id)
