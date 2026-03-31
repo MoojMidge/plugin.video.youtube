@@ -779,7 +779,13 @@ class RequestHandler(BaseHTTPRequestHandler, object):
                 enabled = localize('api.personal.disabled')
 
             if updated:
-                context.send_notification(SYNC_API_KEYS)
+                context.send_notification(
+                    SYNC_API_KEYS,
+                    {
+                        'source': 'http',
+                        'timestamp': 0,
+                    },
+                )
                 # Successfully updated
                 updated = localize('api.config.updated', ', '.join(updated))
             else:

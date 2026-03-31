@@ -17,6 +17,7 @@ from os.path import join as os_path_join
 from .. import logging
 from ..compatibility import to_unicode
 from ..constants import DATA_PATH, FAIL_FLAG, FILE_READ, FILE_WRITE
+from ..utils.datetime import current_timestamp
 from ..utils.file_system import make_dirs
 from ..utils.methods import merge_dicts
 
@@ -40,20 +41,21 @@ class JSONStore(object):
             self.filepath = None
 
         self._context = context
-        self._loaded = False
         self._data = {}
-        self.init()
+        self.loaded = self.init()
 
     def init(self):
-        loaded = self.load(stacklevel=4, ipc=False)
-        self.set_defaults(reset=(not loaded))
+        loaded = self.load(stacklevel=3, ipc=False)
+        self.set_defaults(reset=(loaded <= 0))
         return loaded
 
     def set_defaults(self, reset=False):
         raise NotImplementedError
 
-    def save(self, data, update=False, process=True, ipc=True, stacklevel=2):
-        loaded = self._loaded
+    def save(self, data, update=False, process=True, ipc=True, stacklevel=None):
+        stacklevel = 2 if stacklevel is None else stacklevel + 1
+
+        loaded = self.loaded
         filepath = self.filepath
         try:
             if not filepath:
@@ -62,9 +64,9 @@ class JSONStore(object):
             self.log.debug('Saving: %s', filepath, stacklevel=stacklevel)
 
             _data = self._data
-            if loaded is False:
+            if loaded == 0:
                 loaded = self.load(stacklevel=4)
-                if loaded:
+                if loaded >= 0:
                     self.log.warning(('File state out of sync - data discarded',
                                       'File:     {file}',
                                       'Old data: {old_data!p}',
@@ -92,7 +94,7 @@ class JSONStore(object):
                 object_pairs_hook=(self._process_data if process else None),
             )
 
-            if loaded is False:
+            if loaded == 0:
                 self.log.debug('Deferred: %s', filepath, stacklevel=stacklevel)
                 return None
 
@@ -129,10 +131,14 @@ class JSONStore(object):
                                stacklevel=stacklevel)
             self.set_defaults(reset=True)
             return False
-        return True
 
-    def load(self, process=True, ipc=True, stacklevel=2):
-        loaded = False
+        self.loaded = current_timestamp()
+        return self.loaded
+
+    def load(self, process=True, ipc=True, stacklevel=None):
+        stacklevel = 2 if stacklevel is None else stacklevel + 1
+
+        loaded = 0
         filepath = self.filepath
         data = ''
         try:
@@ -162,24 +168,32 @@ class JSONStore(object):
                 data,
                 object_pairs_hook=(self._process_data if process else None),
             )
-            loaded = True
+            loaded = current_timestamp()
         except (RuntimeError, EnvironmentError, IOError, OSError) as exc:
             self.log.exception(('Access error', 'File: %s'),
                                filepath or self._filename,
                                stacklevel=stacklevel)
             if exc.errno == ENOENT:
-                loaded = None
+                loaded = -1
         except (TypeError, ValueError):
             self.log.exception(('Invalid data', 'Data: {data!r}'),
                                data=data,
                                stacklevel=stacklevel)
-            loaded = None
+            loaded = -1
 
-        self._loaded = loaded
+        self.loaded = loaded
         return loaded
 
-    def get_data(self, process=True, fallback=True, stacklevel=2):
-        if not self._loaded:
+    def get_data(self,
+                 reload=False,
+                 process=True,
+                 fallback=True,
+                 stacklevel=None):
+        stacklevel = 2 if stacklevel is None else stacklevel + 1
+
+        if not reload and self.loaded > 0:
+            return self._data
+        if reload or self.loaded <= 0:
             self.init()
         data = self._data
 
@@ -197,11 +211,13 @@ class JSONStore(object):
             if fallback:
                 self.set_defaults(reset=True)
                 return self.get_data(process=process, fallback=False)
-            if self._loaded:
+            if self.loaded > 0:
                 raise exc
             return data
 
-    def load_data(self, data, process=True, stacklevel=2):
+    def load_data(self, data, process=True, stacklevel=None):
+        stacklevel = 2 if stacklevel is None else stacklevel + 1
+
         try:
             return json_loads(
                 data,

@@ -13,7 +13,7 @@ from base64 import b64decode, b64encode
 
 from .json_store import JSONStore
 from .. import logging
-from ..constants import DEVELOPER_CONFIGS
+from ..constants import DEVELOPER_CONFIGS, SYNC_API_KEYS
 from ... import key_sets
 
 
@@ -51,7 +51,21 @@ class APIKeyStore(JSONStore):
                 keys['developer'] = {}
             data['keys'] = keys
 
-        self.save(data)
+        self.save(data, stacklevel=4)
+
+    def save(self, *args, **kwargs):
+        if 'stacklevel' in kwargs:
+            kwargs['stacklevel'] += 1
+        success = super(APIKeyStore, self).save(*args, **kwargs)
+        if success:
+            self._context.send_notification(
+                SYNC_API_KEYS,
+                {
+                    'source': 'store',
+                    'timestamp': self.loaded,
+                },
+            )
+        return success
 
     @staticmethod
     def get_current_switch():
@@ -260,13 +274,13 @@ class APIKeyStore(JSONStore):
         if existing_config and existing_config == new_config:
             return False
         data['keys']['developer'][developer_id] = new_config
-        return self.save(data)
+        return self.save(data, stacklevel=2)
 
-    def sync(self, update_store=False, update_settings=False):
-        api_data = self.get_data()
-        settings = self._context.settings()
+    def sync(self, from_store=False, from_settings=False):
+        api_data = self.get_data(reload=from_store)
+        settings = self._context.settings(refresh=from_settings)
 
-        forced = update_store
+        forced = from_store or from_settings
         stored_values = (
             api_data['keys']['user'].get('api_key', ''),
             api_data['keys']['user'].get('client_id', ''),
@@ -283,62 +297,70 @@ class APIKeyStore(JSONStore):
         _settings_values = self.strip_details(*settings_values)
         all_settings = all(settings_values)
 
-        if all_stored:
-            sync_to_settings = (
-                    not update_store
-                    and _settings_values != _stored_values
-            )
-        else:
-            sync_to_settings = update_settings
-
         if all_settings:
-            sync_to_store = (
-                    not update_settings
-                    and _stored_values != _settings_values
-            )
+            sync_to_store = _stored_values != _settings_values
         else:
-            sync_to_store = update_store
+            sync_to_store = from_settings
 
-        update_settings = all_settings and settings_values != _settings_values
-        update_store = all_stored and stored_values != _stored_values
+        if all_stored:
+            sync_to_settings = _settings_values != _stored_values
+        else:
+            sync_to_settings = from_store
 
-        if sync_to_settings:
+        update_store = (
+                not sync_to_store
+                and all_stored
+                and stored_values != _stored_values
+        )
+        update_settings = (
+                not sync_to_settings
+                and all_settings
+                and settings_values != _settings_values
+        )
+
+        if sync_to_store:
+            user = {
+                'api_key': _settings_values[0],
+                'client_id': _settings_values[1],
+                'client_secret': _settings_values[2],
+            }
+            if from_store:
+                api_data['keys']['user'] = user
+            else:
+                api_data = {
+                    'keys': {
+                        'user': user,
+                    },
+                }
+                self.save(api_data, update=True, ipc=not forced, stacklevel=2)
+
+        elif sync_to_settings:
             settings.api_key(_stored_values[0])
             settings.api_id(_stored_values[1])
             settings.api_secret(_stored_values[2])
+
+        if update_store:
+            user = {
+                'api_key': _stored_values[0],
+                'client_id': _stored_values[1],
+                'client_secret': _stored_values[2],
+            }
+            if from_store:
+                api_data['keys']['user'] = user
+            else:
+                api_data = {
+                    'keys': {
+                        'user': user,
+                    },
+                }
+                self.save(api_data, update=True, ipc=not forced, stacklevel=2)
 
         elif update_settings:
             settings.api_key(_settings_values[0])
             settings.api_id(_settings_values[1])
             settings.api_secret(_settings_values[2])
 
-        elif sync_to_store:
-            api_data = {
-                'keys': {
-                    'user': {
-                        'api_key': _settings_values[0],
-                        'client_id': _settings_values[1],
-                        'client_secret': _settings_values[2],
-                    },
-                },
-            }
-            self.save(api_data, update=True, ipc=not forced)
-
-        elif update_store:
-            api_data = {
-                'keys': {
-                    'user': {
-                        'api_key': _stored_values[0],
-                        'client_id': _stored_values[1],
-                        'client_secret': _stored_values[2],
-                    },
-                },
-            }
-            self.save(api_data, update=True, ipc=not forced)
-
-        else:
-            return False
-        return True
+        return sync_to_store, sync_to_settings, update_store, update_settings
 
     def update(self):
         context = self._context

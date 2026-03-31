@@ -16,6 +16,7 @@ from ..abstract_settings import AbstractSettings
 from ... import logging
 from ...compatibility import xbmcaddon
 from ...constants import ADDON_ID, BOOL_FROM_STR
+from ...utils.datetime import current_timestamp
 from ...utils.system_version import current_system_version
 
 
@@ -102,6 +103,7 @@ class XbmcPluginSettings(AbstractSettings):
 
     def __init__(self, xbmc_addon=None):
         self.flush(xbmc_addon, fill=True)
+        self.loaded = current_timestamp()
 
     def flush(self, xbmc_addon=None, fill=False, flush_all=True):
         if not xbmc_addon:
