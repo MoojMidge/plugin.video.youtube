@@ -200,10 +200,12 @@ class XbmcPlugin(AbstractPlugin):
         if ui.get_property(PLUGIN_SLEEPING):
             context.ipc_exec(PLUGIN_WAKEUP)
 
-        if ui.pop_property(SYNC_API_KEYS):
-            context.get_api_store().sync(update_store=True)
+        api_store = context.get_api_store()
+        if api_store.loaded < context.get_global(SYNC_API_KEYS):
+            api_store.sync(from_store=True)
 
-        if ui.pop_property(RELOAD_ACCESS_MANAGER):
+        access_manager = context.get_access_manager()
+        if access_manager.loaded < context.get_global(RELOAD_ACCESS_MANAGER):
             context.reload_access_manager()
 
         settings = context.settings()
