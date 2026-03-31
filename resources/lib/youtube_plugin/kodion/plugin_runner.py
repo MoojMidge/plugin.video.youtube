@@ -48,7 +48,8 @@ def run(context=_context,
     ui = context.get_ui()
 
     settings = context.settings()
-    if settings.loaded < context.get_global(CHECK_SETTINGS):
+    plugin_globals = context.get_globals()
+    if settings.loaded < plugin_globals.get(CHECK_SETTINGS, 0):
         provider.reset_client(context=context)
         settings = context.settings(refresh=True)
 
@@ -140,6 +141,7 @@ def run(context=_context,
     try:
         plugin.run(provider,
                    context,
+                   plugin_globals,
                    forced=forced,
                    is_same_path=is_same_path,
                    refresh_target=refresh_target,

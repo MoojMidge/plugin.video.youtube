@@ -829,4 +829,4 @@ class AbstractContext(object):
                 'key': None,
             },
             stacklevel=3,
-        )
+        ) or {}
