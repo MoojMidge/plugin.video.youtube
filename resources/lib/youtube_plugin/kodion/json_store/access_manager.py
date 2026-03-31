@@ -8,12 +8,12 @@
     See LICENSES/GPL-2.0-only for more information.
 """
 
-import time
 from uuid import uuid4
 
 from .json_store import JSONStore
 from ..compatibility import string_type
-from ..constants import ADDON_ID
+from ..constants import ADDON_ID, RELOAD_ACCESS_MANAGER
+from ..utils.datetime import current_timestamp
 from ..utils.methods import generate_hash
 
 
@@ -41,10 +41,26 @@ class AccessManager(JSONStore):
         super(AccessManager, self).__init__('access_manager.json', context)
 
     def init(self):
-        super(AccessManager, self).init()
+        loaded = self.load(stacklevel=3, ipc=False)
+        self.set_defaults(reset=(loaded <= 0))
         access_manager_data = self._data['access_manager']
         self._user = access_manager_data.get('current_user', 0)
         self._last_origin = access_manager_data.get('last_origin', ADDON_ID)
+        return loaded
+
+    def save(self, *args, **kwargs):
+        if 'stacklevel' in kwargs:
+            kwargs['stacklevel'] += 1
+        success = super(AccessManager, self).save(*args, **kwargs)
+        if success:
+            self._context.send_notification(
+                RELOAD_ACCESS_MANAGER,
+                {
+                    'source': 'store',
+                    'timestamp': self.loaded,
+                },
+            )
+        return success
 
     def set_defaults(self, reset=False):
         data = {} if reset else self.get_data()
@@ -153,7 +169,7 @@ class AccessManager(JSONStore):
             user['id'] = user_uuid
         # end uuid check
 
-        return self.save(data)
+        return self.save(data, stacklevel=4)
 
     @staticmethod
     def _process_data(data):
@@ -209,7 +225,7 @@ class AccessManager(JSONStore):
         Returns users
         :return: users
         """
-        data = self._data if self._loaded else self.get_data()
+        data = self.get_data()
         return data['access_manager'].get('users', {})
 
     def add_user(self, username='', user=None):
@@ -467,7 +483,7 @@ class AccessManager(JSONStore):
         details = self.get_current_user_details(addon_id)
         access_tokens = details.get('access_token').split('|')
         expiry_timestamp = int(details.get('token_expires', -1))
-        if expiry_timestamp > int(time.time()):
+        if expiry_timestamp > current_timestamp():
             num_access_tokens = len([1 for token in access_tokens if token])
         else:
             num_access_tokens = 0
@@ -502,7 +518,7 @@ class AccessManager(JSONStore):
                 expiry = min(map(int, expiry)) if expiry else -1
             else:
                 expiry = int(expiry)
-            details['token_expires'] = time.time() + expiry
+            details['token_expires'] = current_timestamp() + expiry
 
         if refresh_token is not None:
             details['refresh_token'] = (
@@ -551,7 +567,7 @@ class AccessManager(JSONStore):
         Returns developers
         :return: dict, developers
         """
-        data = self._data if self._loaded else self.get_data()
+        data = self.get_data()
         return data['access_manager'].get('developers', {})
 
     def add_new_developer(self, addon_id):
