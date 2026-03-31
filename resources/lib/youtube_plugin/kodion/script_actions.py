@@ -464,8 +464,13 @@ def _user_actions(context, action, params):
         reload = True
 
     if reload:
-        ui.set_property(RELOAD_ACCESS_MANAGER)
-        context.send_notification(RELOAD_ACCESS_MANAGER)
+        context.send_notification(
+            RELOAD_ACCESS_MANAGER,
+            {
+                'source': 'script',
+                'timestamp': access_manager.loaded,
+            },
+        )
     return True
 
 

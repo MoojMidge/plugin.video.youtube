@@ -48,11 +48,10 @@ def run(argv,
         profiler=_profiler):
     ui = context.get_ui()
 
-    if context.pop_global(CHECK_SETTINGS):
+    settings = context.settings()
+    if settings.loaded < context.get_global(CHECK_SETTINGS):
         provider.reset_client(context=context)
         settings = context.settings(refresh=True)
-    else:
-        settings = context.settings()
 
     log_level = settings.log_level()
     if log_level:

@@ -48,7 +48,7 @@ from ..constants import (
     VIDEO_ID,
 )
 from ..network import get_connect_address, get_http_server, httpd_status
-from ..utils.datetime import datetime_elapsed
+from ..utils.datetime import current_timestamp, datetime_elapsed
 from ..utils.methods import jsonrpc
 
 
@@ -63,7 +63,6 @@ class ServiceMonitor(xbmc.Monitor):
         self._provider = provider
         self._context = context
 
-        self._api_values = ('', '', '')
         self._httpd_address = None
         self._httpd_port = None
         self._whitelist = None
@@ -90,12 +89,15 @@ class ServiceMonitor(xbmc.Monitor):
         }
 
         self.plugin_data = {
-            CHECK_SETTINGS: None,
+            CHECK_SETTINGS: 0,
             PLAY_CANCELLED: None,
             PLAY_FORCED: None,
             PLAYER_VIDEO_ID: None,
+            RELOAD_ACCESS_MANAGER: 0,
+            SYNC_API_KEYS: 0,
         }
 
+        self._api_store = context.get_api_store()
         self.onSettingsChanged(force=True)
 
         super(ServiceMonitor, self).__init__()
@@ -368,11 +370,35 @@ class ServiceMonitor(xbmc.Monitor):
             )
 
         elif event == RELOAD_ACCESS_MANAGER:
-            self._context.reload_access_manager()
-            self.refresh_container()
+            if not data or not isinstance(data, dict):
+                return
+
+            source = data.get('source')
+            if source == 'store':
+                timestamp = data.get('timestamp') or current_timestamp()
+                if timestamp > self.plugin_data[RELOAD_ACCESS_MANAGER]:
+                    self.plugin_data[RELOAD_ACCESS_MANAGER] = timestamp
+                    self.refresh_container()
+            elif source == 'script':
+                self.plugin_data[RELOAD_ACCESS_MANAGER] = current_timestamp()
+                self.refresh_container()
 
         elif event == SYNC_API_KEYS:
-            self.onSettingsChanged(force=True)
+            if not data or not isinstance(data, dict):
+                return
+
+            source = data.get('source')
+            if source == 'store':
+                timestamp = data.get('timestamp') or current_timestamp()
+                if timestamp > self.plugin_data[SYNC_API_KEYS]:
+                    self._context.settings(refresh=True)
+                    self._api_store.sync(from_store=True)
+                    self.plugin_data[SYNC_API_KEYS] = timestamp
+                    self.refresh_container()
+            elif source == 'settings':
+                self.plugin_data[SYNC_API_KEYS] = current_timestamp()
+            elif source == 'http':
+                pass
 
         elif event == PLAYBACK_STOPPED:
             if not data or not isinstance(data, dict):
@@ -462,18 +488,19 @@ class ServiceMonitor(xbmc.Monitor):
             self.log.stack_info = False
             self.log.verbose_logging = False
 
-        api_values = (
-            settings.api_key(),
-            settings.api_id(),
-            settings.api_secret(),
-        )
-        if api_values != self._api_values:
-            context.get_api_store().sync(update_store=True)
-            self._api_values = api_values
-            context.get_ui().set_property(SYNC_API_KEYS)
+        if any(self._api_store.sync(from_settings=True)):
+            self.onNotification(
+                ADDON_ID,
+                SYNC_API_KEYS,
+                {
+                    'timestamp': -1,
+                    'source': 'settings',
+                },
+            )
 
-        self.plugin_data[CHECK_SETTINGS] = True
-        self.refresh_container()
+        self.plugin_data[CHECK_SETTINGS] = current_timestamp()
+        if not force:
+            self.refresh_container()
 
         httpd_started = bool(self.httpd)
         httpd_restart = False

@@ -170,6 +170,7 @@ class AbstractProvider(object):
             settings.setup_wizard_enabled(False)
             settings_state['state'] = 'process'
             context.ipc_exec(CHECK_SETTINGS, timeout=5, payload=settings_state)
+            ui.refresh_container()
 
     @staticmethod
     def get_wizard_steps():

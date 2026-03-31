@@ -139,18 +139,14 @@ class Provider(AbstractProvider):
         api_store = context.get_api_store()
         settings = context.settings()
 
-        client = self._client
-        if not client or not client.initialised:
-            synced = api_store.sync()
-        else:
-            synced = False
+        resync = any(api_store.sync())
         configs = api_store.get_configs()
 
         dev_id = context.get_param('addon_id')
         if not dev_id or dev_id == ADDON_ID:
             origin = ADDON_ID
             dev_id = None
-            if synced:
+            if resync:
                 switch = api_store.get_current_switch()
                 key_details = api_store.get_key_set(switch)
                 self.log.debug(('Using personal API details',
@@ -215,6 +211,7 @@ class Provider(AbstractProvider):
         ) = access_manager.get_access_tokens(dev_id)
 
         api_last_origin = access_manager.get_last_origin()
+        client = self._client
         if not client:
             client = YouTubePlayerClient(
                 context=context,

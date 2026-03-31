@@ -14,7 +14,7 @@ from datetime import date, datetime, time as dt_time, timedelta
 from importlib import import_module
 from re import compile as re_compile
 from sys import modules as sys_modules
-from time import gmtime, strftime
+from time import gmtime, strftime, time
 
 from ..compatibility import xbmc
 from ..exceptions import KodionException
@@ -73,6 +73,10 @@ __INTERNAL_CONSTANTS__ = {
 now = datetime.now
 fromtimestamp = datetime.fromtimestamp
 date_types = (date, datetime)
+
+
+def current_timestamp():
+    return int(time())
 
 
 def parse_to_dt(datetime_string):
