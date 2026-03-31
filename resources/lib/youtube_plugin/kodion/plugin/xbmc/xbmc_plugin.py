@@ -19,7 +19,7 @@ from ...constants import (
     CONTAINER_FOCUS,
     CONTAINER_ID,
     CONTAINER_POSITION,
-    FORCE_PLAY_PARAMS,
+    CONTEXT_MENU,
     PATHS,
     PLAYBACK_FAILED,
     PLAYER_VIDEO_ID,
@@ -28,6 +28,10 @@ from ...constants import (
     PLAY_CANCELLED,
     PLAY_FORCED,
     PLAY_FORCE_AUDIO,
+    PLAY_PROMPT_QUALITY,
+    PLAY_PROMPT_SUBTITLES,
+    PLAY_TIMESHIFT,
+    PLAY_USING,
     PLUGIN_SLEEPING,
     PLUGIN_WAKEUP,
     REFRESH_CONTAINER,
@@ -79,13 +83,46 @@ class XbmcPlugin(AbstractPlugin):
         super(XbmcPlugin, self).__init__()
 
     @staticmethod
-    def end(handle, succeeded=True, update_listing=False, cache_to_disc=True):
-        xbmcplugin.endOfDirectory(
-            handle=handle,
-            succeeded=succeeded,
-            updateListing=update_listing,
-            cacheToDisc=cache_to_disc,
-        )
+    def end(context,
+            handle=None,
+            succeeded=True,
+            update_listing=False,
+            cache_to_disc=True,
+            clear_props=None,
+            post_run_operations=None):
+        context.pop_param(CONTEXT_MENU)
+
+        ui = context.get_ui()
+        _clear_prop = ui.clear_property
+
+        if clear_props is None:
+            clear_props = {}
+        if not clear_props.get('none', False):
+            clear_all_props = clear_props.get('all', False)
+            if clear_all_props:
+                _clear_prop(PLAY_CANCELLED)
+                _clear_prop(PLAY_FORCED)
+                _clear_prop(PLAY_TIMESHIFT)
+            if clear_all_props or not ui.busy_dialog_active():
+                _clear_prop(BUSY_FLAG)
+            if clear_all_props or clear_props.get('start_play', True):
+                _clear_prop(PLAY_FORCE_AUDIO)
+                _clear_prop(PLAY_TIMESHIFT)
+                _clear_prop(PLAY_PROMPT_QUALITY)
+                _clear_prop(PLAY_PROMPT_SUBTITLES)
+            if clear_all_props or clear_props.get('end_play', True):
+                _clear_prop(PLAY_USING)
+                _clear_prop(TRAKT_PAUSE_FLAG, raw=True)
+
+        handle = context.get_handle() if handle is None else handle
+        if handle != -1:
+            xbmcplugin.endOfDirectory(
+                handle=handle,
+                succeeded=succeeded,
+                updateListing=update_listing,
+                cacheToDisc=cache_to_disc,
+            )
+        return succeeded, post_run_operations
 
     def run(self,
             provider,
@@ -111,33 +148,31 @@ class XbmcPlugin(AbstractPlugin):
         _post_run_operation = None
         post_run_operations = []
         succeeded = False
-        for was_busy in (ui.pop_property(BUSY_FLAG),):
-            if was_busy:
-                if ui.busy_dialog_active():
-                    ui.set_property(BUSY_FLAG)
-                if route:
-                    break
-            else:
-                break
+
+        was_busy = ui.get_property(BUSY_FLAG)
+        if not was_busy:
+            pass
+        elif route:
+            if not ui.busy_dialog_active():
+                ui.clear_property(BUSY_FLAG)
+        else:
+            if not ui.busy_dialog_active():
+                ui.clear_property(BUSY_FLAG)
 
             playlist_player = context.playlist_player()
-            position, remaining = playlist_player.get_position()
-            playing = is_play_path and playlist_player.is_playing()
-
-            if playing:
-                items = playlist_player.get_items()
-                playlist_player.clear()
+            if is_play_path and playlist_player.is_playing():
                 logging.warning('Multiple busy dialogs active'
                                 ' - Playlist cleared to avoid Kodi crash')
-
-            xbmcplugin.endOfDirectory(
-                handle,
-                succeeded=False,
-                updateListing=True,
-                cacheToDisc=False,
-            )
-
-            if not playing:
+                post_run_operations.append((
+                    self.busy_playing_post_run_operation,
+                    {
+                        'context': context,
+                        'items': playlist_player.get_items(),
+                        'playlist_position': playlist_player.get_position(),
+                    }
+                ))
+                playlist_player.clear()
+            else:
                 logging.warning('Multiple busy dialogs active'
                                 ' - Plugin call ended to avoid Kodi crash')
                 result, _post_run_operation = self.uri_operation(context, uri)
@@ -145,61 +180,16 @@ class XbmcPlugin(AbstractPlugin):
                 if _post_run_operation:
                     post_run_operations.append(_post_run_operation)
                     _post_run_operation = None
-                continue
 
-            if position:
-                path = items[position - 1]['file']
-                old_path = ui.pop_property(PLAYLIST_PATH)
-                old_position = ui.pop_property(PLAYLIST_POSITION)
-                if (old_position and position == int(old_position)
-                        and old_path and path == old_path):
-                    if remaining:
-                        position += 1
-                    else:
-                        continue
-
-            timeout = 30
-            while ui.busy_dialog_active():
-                timeout -= 1
-                if timeout < 0:
-                    logging.error('Multiple busy dialogs active'
-                                  ' - Extended busy period')
-                    break
-                context.sleep(1)
-
-            logging.warning('Multiple busy dialogs active'
-                            ' - Reloading playlist...')
-
-            num_items = playlist_player.add_items(items)
-            if position:
-                timeout = min(position, num_items)
-            else:
-                position = 1
-                timeout = num_items
-
-            while ui.busy_dialog_active() or playlist_player.size() < position:
-                timeout -= 1
-                if timeout < 0:
-                    logging.error('Multiple busy dialogs active'
-                                  ' - Playback restart failed, retrying...')
-                    command = playlist_player.play_playlist_item(position,
-                                                                 defer=True)
-                    result, _post_run_operation = self.uri_operation(
-                        context,
-                        command,
-                    )
-                    succeeded = False
-                    if _post_run_operation:
-                        post_run_operations.append(_post_run_operation)
-                        _post_run_operation = None
-                    break
-                context.sleep(1)
-            else:
-                playlist_player.play_playlist_item(position)
-        else:
-            if post_run_operations:
-                self.post_run(context, post_run_operations)
-            return succeeded
+            return self.end(
+                context,
+                handle=handle,
+                succeeded=succeeded,
+                update_listing=True,
+                cache_to_disc=False,
+                clear_props={'none': True},
+                post_run_operations=post_run_operations,
+            )
 
         if ui.get_property(PLUGIN_SLEEPING):
             context.ipc_exec(PLUGIN_WAKEUP)
@@ -232,13 +222,15 @@ class XbmcPlugin(AbstractPlugin):
                 logging.debug('Plugin runner options: {options!r}',
                               options=options)
                 if ui.get_property(REROUTE_PATH):
-                    xbmcplugin.endOfDirectory(
-                        handle,
+                    return self.end(
+                        context,
+                        handle=handle,
                         succeeded=False,
-                        updateListing=True,
-                        cacheToDisc=False,
+                        update_listing=True,
+                        cache_to_disc=False,
+                        clear_props={'none': True},
+                        post_run_operations=post_run_operations,
                     )
-                    return False
         except KodionException as exc:
             result = None
             options = {}
@@ -388,11 +380,6 @@ class XbmcPlugin(AbstractPlugin):
                     handle, succeeded=True, listitem=item
                 )
         elif not items or force_return:
-            ui.clear_property(BUSY_FLAG)
-            ui.clear_property(TRAKT_PAUSE_FLAG, raw=True)
-            for param in FORCE_PLAY_PARAMS:
-                ui.clear_property(param)
-
             fallback = options.get(provider.FALLBACK, not force_return)
             if force_refresh:
                 _post_run_operation = (
@@ -494,13 +481,6 @@ class XbmcPlugin(AbstractPlugin):
                 is_same_path=False,
             )
 
-        xbmcplugin.endOfDirectory(
-            handle,
-            succeeded=succeeded,
-            updateListing=update_listing,
-            cacheToDisc=cache_to_disc,
-        )
-
         if not force_return:
             if any(sync_items):
                 context.send_notification(SYNC_LISTITEM, sync_items)
@@ -523,9 +503,18 @@ class XbmcPlugin(AbstractPlugin):
                         },
                     ))
 
-        if post_run_operations:
-            self.post_run(context, post_run_operations)
-        return succeeded
+        return self.end(
+            context,
+            handle=handle,
+            succeeded=succeeded,
+            update_listing=update_listing,
+            cache_to_disc=cache_to_disc,
+            clear_props={
+                'start_play': True,
+                'end_play': not succeeded,
+            },
+            post_run_operations=post_run_operations,
+        )
 
     @staticmethod
     def post_run(context, operations, **kwargs):
@@ -534,35 +523,46 @@ class XbmcPlugin(AbstractPlugin):
         timeout = kwargs.get('timeout', 30)
         interval = kwargs.get('interval', 0.1)
         busy = True
-        for operation in operations:
-            while not ui.get_container(container_type=False, check_ready=True):
-                timeout -= interval
-                if timeout < 0:
-                    logging.error('Container not ready'
-                                  ' - Post run operation unable to execute')
-                    break
-                context.sleep(interval)
-            else:
-                if busy:
-                    busy = ui.clear_property(BUSY_FLAG)
-                if isinstance(operation, tuple):
-                    operation, operation_kwargs = operation
+
+        while operations:
+            _operations = operations
+            operations = []
+            for operation in _operations:
+                while not ui.get_container(
+                        container_type=False,
+                        check_ready=True,
+                ):
+                    timeout -= interval
+                    if timeout < 0:
+                        logging.error('Container not ready'
+                                      ' - Post run operation unable to execute')
+                        break
+                    context.sleep(interval)
                 else:
-                    operation_kwargs = None
-                logging.debug(('Executing queued post-run operation',
-                               'Operation: {operation}',
-                               'Arguments: {operation_kwargs!p}'),
-                              operation=operation,
-                              operation_kwargs=operation_kwargs,
-                              stacklevel=2)
-                if callable(operation):
-                    if operation_kwargs:
-                        operation(**operation_kwargs)
+                    if busy:
+                        busy = ui.clear_property(BUSY_FLAG)
+                    if isinstance(operation, tuple):
+                        operation, operation_kwargs = operation
                     else:
-                        operation()
-                else:
-                    context.execute(operation)
-                context.sleep(interval)
+                        operation_kwargs = None
+                    logging.debug(('Executing queued post-run operation',
+                                   'Operation: {operation}',
+                                   'Arguments: {operation_kwargs!p}'),
+                                  operation=operation,
+                                  operation_kwargs=operation_kwargs,
+                                  stacklevel=2)
+                    if callable(operation):
+                        if operation_kwargs:
+                            result = operation(**operation_kwargs)
+                        else:
+                            result = operation()
+                        if isinstance(result, dict):
+                            new_operation = result.get('__new_operation__')
+                            if new_operation:
+                                operations.append(new_operation)
+                    else:
+                        context.execute(operation)
+                    context.sleep(interval)
 
     @staticmethod
     def uri_operation(context, uri):
@@ -692,3 +692,54 @@ class XbmcPlugin(AbstractPlugin):
                       uri=log_uri,
                       stacklevel=2)
         return result, operation
+
+    @classmethod
+    def busy_playing_post_run_operation(cls, context, items, playlist_position):
+        ui = context.get_ui()
+        position, remaining = playlist_position
+        if position:
+            path = items[position - 1]['file']
+            old_path = ui.pop_property(PLAYLIST_PATH)
+            old_position = ui.pop_property(PLAYLIST_POSITION)
+            if (old_position and position == int(old_position)
+                    and old_path and path == old_path):
+                if not remaining:
+                    return None
+                position += 1
+
+        timeout = 30
+        while ui.busy_dialog_active():
+            timeout -= 1
+            if timeout < 0:
+                logging.error('Multiple busy dialogs active'
+                              ' - Extended busy period')
+                break
+            context.sleep(1)
+
+        logging.warning('Multiple busy dialogs active'
+                        ' - Reloading playlist...')
+
+        playlist_player = context.playlist_player()
+        num_items = playlist_player.add_items(items)
+        if position:
+            timeout = min(position, num_items)
+        else:
+            position = 1
+            timeout = num_items
+
+        retry = False
+        while ui.busy_dialog_active() or playlist_player.size() < position:
+            timeout -= 1
+            if timeout < 0:
+                logging.error('Multiple busy dialogs active'
+                              ' - Playback restart failed, retrying...')
+                retry = True
+                break
+            context.sleep(1)
+
+        result = playlist_player.play_playlist_item(position, defer=retry)
+        if result:
+            _, new_operation = cls.uri_operation(context, result)
+            if new_operation:
+                result = {'__new_operation__': new_operation}
+        return result

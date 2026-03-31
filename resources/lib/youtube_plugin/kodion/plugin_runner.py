@@ -14,13 +14,10 @@ import gc
 
 from . import logging
 from .constants import (
-    BUSY_FLAG,
     CHECK_SETTINGS,
     FOLDER_URI,
-    FORCE_PLAY_PARAMS,
     PATHS,
     REFRESH_CONTAINER,
-    TRAKT_PAUSE_FLAG,
 )
 from .context import XbmcContext
 from .debug import Profiler
@@ -139,24 +136,25 @@ def run(context=_context,
     gc_threshold = gc.get_threshold()
     gc.set_threshold(0)
     try:
-        plugin.run(provider,
-                   context,
-                   plugin_globals,
-                   forced=forced,
-                   is_same_path=is_same_path,
-                   refresh_target=refresh_target,
-                   **new_kwargs)
+        succeeded, post_run_operations = plugin.run(
+            provider,
+            context,
+            plugin_globals,
+            forced=forced,
+            is_same_path=is_same_path,
+            refresh_target=refresh_target,
+            **new_kwargs
+        )
+        if post_run_operations:
+            plugin.post_run(context, post_run_operations)
     except Exception:
         log.exception('Error')
-        ui.clear_property(BUSY_FLAG)
-        ui.clear_property(TRAKT_PAUSE_FLAG, raw=True)
-        for param in FORCE_PLAY_PARAMS:
-            ui.clear_property(param)
         plugin.end(
-            context.get_handle(),
+            context,
             succeeded=False,
             update_listing=True,
             cache_to_disc=False,
+            clear_props={'all': True},
         )
     finally:
         if log_level:
