@@ -90,6 +90,7 @@ class XbmcPlugin(AbstractPlugin):
     def run(self,
             provider,
             context,
+            plugin_globals,
             forced=False,
             is_same_path=False,
             refresh_target=None,
@@ -101,7 +102,10 @@ class XbmcPlugin(AbstractPlugin):
         path = context.get_path().rstrip('/')
 
         is_play_path = path == PATHS.PLAY
-        force_play = context.pop_global(PLAY_FORCED)
+        force_play = plugin_globals.get(PLAY_FORCED)
+        if force_play:
+            plugin_globals[PLAY_FORCED] = None
+            context.set_global(PLAY_FORCED, None)
 
         route = ui.pop_property(REROUTE_PATH)
         _post_run_operation = None
@@ -201,11 +205,11 @@ class XbmcPlugin(AbstractPlugin):
             context.ipc_exec(PLUGIN_WAKEUP)
 
         api_store = context.get_api_store()
-        if api_store.loaded < context.get_global(SYNC_API_KEYS):
+        if api_store.loaded < plugin_globals.get(SYNC_API_KEYS, 0):
             api_store.sync(from_store=True)
 
         access_manager = context.get_access_manager()
-        if access_manager.loaded < context.get_global(RELOAD_ACCESS_MANAGER):
+        if access_manager.loaded < plugin_globals.get(RELOAD_ACCESS_MANAGER, 0):
             context.reload_access_manager()
 
         settings = context.settings()
@@ -258,8 +262,10 @@ class XbmcPlugin(AbstractPlugin):
         else:
             refresh_target = None
         if not refresh_target and forced:
-            played_video_id = context.pop_global(PLAYER_VIDEO_ID)
+            played_video_id = plugin_globals.get(PLAYER_VIDEO_ID)
             if played_video_id:
+                plugin_globals[PLAYER_VIDEO_ID] = None
+                context.set_global(PLAYER_VIDEO_ID, None)
                 focused_video_id = None
             else:
                 focused_video_id = None if route else ui.get_property(VIDEO_ID)
@@ -269,8 +275,10 @@ class XbmcPlugin(AbstractPlugin):
             played_video_id = None
         sync_items = (focused_video_id, played_video_id)
 
-        play_cancelled = context.pop_global(PLAY_CANCELLED)
+        play_cancelled = plugin_globals.get(PLAY_CANCELLED)
         if play_cancelled:
+            plugin_globals[PLAY_CANCELLED] = None
+            context.set_global(PLAY_CANCELLED, None)
             result = None
 
         force_refresh = options.get(provider.FORCE_REFRESH)
@@ -420,6 +428,7 @@ class XbmcPlugin(AbstractPlugin):
                     return self.run(
                         provider,
                         context,
+                        plugin_globals,
                         forced=False,
                         is_same_path=False,
                     )
@@ -480,6 +489,7 @@ class XbmcPlugin(AbstractPlugin):
             return self.run(
                 provider,
                 context,
+                plugin_globals,
                 forced=False,
                 is_same_path=False,
             )

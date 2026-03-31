@@ -15,5 +15,5 @@ class AbstractPlugin(object):
     def __init__(self):
         pass
 
-    def run(self, provider, context):
+    def run(self, provider, context, plugin_globals):
         raise NotImplementedError()
