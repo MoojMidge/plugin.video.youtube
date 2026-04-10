@@ -668,15 +668,21 @@ class XbmcContext(AbstractContext):
             self.__class__._settings.flush()
 
     def settings(self, refresh=False):
-        if refresh or not self._settings:
-            if self._plugin_id != ADDON_ID:
-                addon = xbmcaddon.Addon(self._plugin_id)
+        if not self._settings:
+            addon_id = self._plugin_id if self._plugin_id != ADDON_ID else None
+            addon = xbmcaddon.Addon(addon_id or ADDON_ID)
+            settings = XbmcPluginSettings(addon)
+            if addon_id:
                 self._addon = addon
-                self._settings = XbmcPluginSettings(addon)
+                self._settings = settings
             else:
-                addon = xbmcaddon.Addon(ADDON_ID)
                 self.__class__._addon = addon
-                self.__class__._settings = XbmcPluginSettings(addon)
+                self.__class__._settings = settings
+        elif refresh:
+            addon_id = self._plugin_id if self._plugin_id != ADDON_ID else None
+            addon = xbmcaddon.Addon(addon_id or ADDON_ID)
+            settings = self._settings
+            settings.reinit(addon)
         return self._settings
 
     def localize(self, text_id, args=None, default_text=None):

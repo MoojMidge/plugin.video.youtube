@@ -105,6 +105,9 @@ class XbmcPluginSettings(AbstractSettings):
         self.flush(xbmc_addon, fill=True)
         self.loaded = current_timestamp()
 
+    def reinit(self, *args, **kwargs):
+        self.__init__(*args, **kwargs)
+
     def flush(self, xbmc_addon=None, fill=False, flush_all=True):
         if not xbmc_addon:
             if fill:
@@ -121,7 +124,7 @@ class XbmcPluginSettings(AbstractSettings):
                 self._proxy = None
                 return
         else:
-            fill = False
+            fill = self._proxy and self._proxy.ref
 
         self._cache = {}
         if current_system_version.compatible(21):
