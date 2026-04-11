@@ -10,12 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from weakref import ref
 
 from ..abstract_settings import AbstractSettings
 from ... import logging
-from ...compatibility import xbmcaddon
-from ...constants import ADDON_ID, BOOL_FROM_STR
+from ...constants import BOOL_FROM_STR
 from ...utils.datetime import current_timestamp
 from ...utils.system_version import current_system_version
 
@@ -76,59 +74,20 @@ class SettingsProxy(object):
             value = ','.join(value)
             return self.ref.setSetting(setting, value)
 
-        if not current_system_version.compatible(19):
-            @property
-            def ref(self):
-                if self._ref:
-                    return self._ref()
-                return None
-
-            @ref.setter
-            def ref(self, value):
-                if value:
-                    self._ref = ref(value)
-                else:
-                    self._ref = None
-
-            @ref.deleter
-            def ref(self):
-                del self._ref
-
 
 class XbmcPluginSettings(AbstractSettings):
     log = logging.getLogger(__name__)
 
-    _instances = set()
     _proxy = None
 
-    def __init__(self, xbmc_addon=None):
-        self.flush(xbmc_addon, fill=True)
-        self.loaded = current_timestamp()
+    def __init__(self, xbmc_addon):
+        self.init(xbmc_addon)
 
-    def reinit(self, *args, **kwargs):
-        self.__init__(*args, **kwargs)
 
-    def flush(self, xbmc_addon=None, fill=False, flush_all=True):
-        if not xbmc_addon:
-            if fill:
-                xbmc_addon = xbmcaddon.Addon(ADDON_ID)
-            else:
-                if self.__class__._instances:
-                    if flush_all:
-                        self.__class__._instances.clear()
-                    else:
-                        self.__class__._instances.discard(self._proxy.ref)
-                del self._proxy.ref
-                self._proxy.ref = None
-                del self._proxy
-                self._proxy = None
-                return
-        else:
-            fill = self._proxy and self._proxy.ref
-
+    def init(self, xbmc_addon):
         self._cache = {}
         if current_system_version.compatible(21):
-            self._proxy = SettingsProxy(xbmc_addon.getSettings())
+            self.__class__._proxy = SettingsProxy(xbmc_addon.getSettings())
             # set methods in new Settings class are documented as returning a
             # bool, True if value was set, False otherwise, similar to how the
             # old set setting methods of the Addon class function. Except they
@@ -136,11 +95,13 @@ class XbmcPluginSettings(AbstractSettings):
             # Ignore return value until bug is fixed in Kodi
             self._check_set = False
         else:
-            if fill and not current_system_version.compatible(19):
-                self.__class__._instances.add(xbmc_addon)
-            self._proxy = SettingsProxy(xbmc_addon)
+            self.__class__._proxy = SettingsProxy(xbmc_addon)
 
         self._echo_level = self.log_level()
+        self.loaded = current_timestamp()
+
+    def reinit(self, *args, **kwargs):
+        self.init(*args, **kwargs)
 
     def get_bool(self, setting, default=None, echo_level=2):
         if setting in self._cache:
