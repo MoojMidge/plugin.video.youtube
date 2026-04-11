@@ -549,6 +549,17 @@ class KodiLogger(logging.Logger):
                 **kwargs
             )
 
+    def verbose(self, msg, *args, **kwargs):
+        if self.isEnabledFor(DEBUG) and self.verbose_logging:
+            self._log(
+                DEBUG,
+                msg,
+                args,
+                stack_info=kwargs.pop('stack_info', True),
+                stacklevel=kwargs.pop('stacklevel', 1),
+                **kwargs
+            )
+
     @property
     def debugging(self):
         return self.isEnabledFor(logging.DEBUG)
@@ -620,6 +631,7 @@ error = root.error
 warning = root.warning
 info = root.info
 debug = root.debug
+verbose = root.verbose
 log = root.log
 
 CRITICAL = logging.CRITICAL

@@ -251,22 +251,22 @@ class RequestHandler(BaseHTTPRequestHandler, object):
             'log_params': log_params,
         }
 
-        if not path['path'].startswith(PATHS.PING) and self.log.verbose_logging:
-            self.log.debug(('{status}',
-                            'Method:      {method!r}',
-                            'Path:        {path[log_path]!r}',
-                            'Params:      {path[log_params]!r}',
-                            'Address:     {client_ip!r}',
-                            'Whitelisted: {is_whitelisted}',
-                            'Local range: {is_local}'),
-                           status=('Allowed' if ip_allowed else 'Blocked'),
-                           method=method,
-                           path=path,
-                           client_ip=client_ip,
-                           is_whitelisted=is_whitelisted,
-                           is_local=('Undetermined'
-                                     if is_local is None else
-                                     is_local))
+        if not path['path'].startswith(PATHS.PING):
+            self.log.verbose(('{status}',
+                              'Method:      {method!r}',
+                              'Path:        {path[log_path]!r}',
+                              'Params:      {path[log_params]!r}',
+                              'Address:     {client_ip!r}',
+                              'Whitelisted: {is_whitelisted}',
+                              'Local range: {is_local}'),
+                             status=('Allowed' if ip_allowed else 'Blocked'),
+                             method=method,
+                             path=path,
+                             client_ip=client_ip,
+                             is_whitelisted=is_whitelisted,
+                             is_local=('Undetermined'
+                                       if is_local is None else
+                                       is_local))
         return ip_allowed, path
 
     # noinspection PyPep8Naming

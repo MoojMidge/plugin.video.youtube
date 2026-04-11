@@ -381,12 +381,11 @@ class XbmcContextUI(AbstractContextUI):
         else:
             out = _bool(CURRENT_CONTAINER_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if cls.log.verbose_logging:
-            cls.log.debug(log_msg,
-                          container_id=container_id,
-                          name=name,
-                          out=out,
-                          stacklevel=stacklevel)
+        cls.log.verbose(log_msg,
+                        container_id=container_id,
+                        name=name,
+                        out=out,
+                        stacklevel=stacklevel)
         return out
 
     @classmethod
@@ -409,12 +408,11 @@ class XbmcContextUI(AbstractContextUI):
         else:
             out = _label(CURRENT_CONTAINER_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if cls.log.verbose_logging:
-            cls.log.debug(log_msg,
-                          container_id=container_id,
-                          name=name,
-                          out=out,
-                          stacklevel=stacklevel)
+        cls.log.verbose(log_msg,
+                        container_id=container_id,
+                        name=name,
+                        out=out,
+                        stacklevel=stacklevel)
         return out
 
     @classmethod
@@ -437,12 +435,11 @@ class XbmcContextUI(AbstractContextUI):
         else:
             out = _bool(LISTITEM_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if cls.log.verbose_logging:
-            cls.log.debug(log_msg,
-                          container_id=container_id,
-                          name=name,
-                          out=out,
-                          stacklevel=stacklevel)
+        cls.log.verbose(log_msg,
+                        container_id=container_id,
+                        name=name,
+                        out=out,
+                        stacklevel=stacklevel)
         return out
 
     @classmethod
@@ -464,12 +461,11 @@ class XbmcContextUI(AbstractContextUI):
         else:
             out = _label(LISTITEM_INFO % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if cls.log.verbose_logging:
-            cls.log.debug(log_msg,
-                          container_id=container_id,
-                          name=name,
-                          out=out,
-                          stacklevel=stacklevel)
+        cls.log.verbose(log_msg,
+                        container_id=container_id,
+                        name=name,
+                        out=out,
+                        stacklevel=stacklevel)
         return out
 
     @classmethod
@@ -491,12 +487,11 @@ class XbmcContextUI(AbstractContextUI):
         else:
             out = _label(LISTITEM_PROP % name)
             log_msg = 'Current container used for {name!r}: {out!r}'
-        if cls.log.verbose_logging:
-            cls.log.debug(log_msg,
-                          container_id=container_id,
-                          name=name,
-                          out=out,
-                          stacklevel=stacklevel)
+        cls.log.verbose(log_msg,
+                        container_id=container_id,
+                        name=name,
+                        out=out,
+                        stacklevel=stacklevel)
         return out
 
     @classmethod
