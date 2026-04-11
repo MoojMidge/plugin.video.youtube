@@ -31,6 +31,7 @@ class AbstractSettings(object):
         _vars[name] = value
     del _vars
 
+    loaded = 0
     _echo_level = 0
     _cache = {}
     _check_set = True
