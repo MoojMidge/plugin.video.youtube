@@ -50,13 +50,8 @@ from ...player import XbmcPlaylistPlayer
 from ...settings import XbmcPluginSettings
 from ...ui import XbmcContextUI
 from ...utils.file_system import make_dirs
-from ...utils.methods import (
-    get_kodi_setting_bool,
-    get_kodi_setting_value,
-    jsonrpc,
-    loose_version,
-    wait,
-)
+from ...utils.methods import loose_version, wait
+from ...utils.kodi import get_kodi_setting_bool, get_kodi_setting_value, jsonrpc
 from ...utils.system_version import current_system_version
 
 
