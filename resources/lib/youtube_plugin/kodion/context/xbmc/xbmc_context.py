@@ -656,12 +656,6 @@ class XbmcContext(AbstractContext):
     def get_addon_path(self):
         return self._addon_path
 
-    def clear_settings(self):
-        if self._plugin_id != ADDON_ID and self._settings:
-            self._settings.flush()
-        if self.__class__._settings:
-            self.__class__._settings.flush()
-
     def settings(self, refresh=False):
         if not self._settings:
             addon_id = self._plugin_id if self._plugin_id != ADDON_ID else None
@@ -1003,7 +997,6 @@ class XbmcContext(AbstractContext):
         )
 
     def tear_down(self):
-        self.clear_settings()
         attrs = (
             '_addon',
             '_settings',
