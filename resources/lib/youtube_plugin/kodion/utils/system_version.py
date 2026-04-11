@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from platform import python_version
 
-from .methods import jsonrpc
+from .kodi import jsonrpc
 from ..compatibility import string_type
 
 

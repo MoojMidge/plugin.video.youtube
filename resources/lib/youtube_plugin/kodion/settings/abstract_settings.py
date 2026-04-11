@@ -21,7 +21,7 @@ from ..constants import (
     SETTINGS,
 )
 from ..network.http_server import validate_ip_address
-from ..utils.methods import get_kodi_setting_bool, get_kodi_setting_value
+from ..utils.kodi import get_kodi_setting_bool, get_kodi_setting_value
 from ..utils.system_version import current_system_version
 
 

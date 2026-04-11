@@ -16,7 +16,8 @@ from ..abstract_playlist_player import AbstractPlaylistPlayer
 from ... import logging
 from ...compatibility import xbmc
 from ...items import VideoItem, media_listitem
-from ...utils.methods import jsonrpc, wait
+from ...utils.methods import wait
+from ...utils.kodi import jsonrpc
 from ...utils.system_version import current_system_version
 
 

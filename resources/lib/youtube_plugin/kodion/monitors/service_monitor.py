@@ -49,7 +49,7 @@ from ..constants import (
 )
 from ..network import get_connect_address, get_http_server, httpd_status
 from ..utils.datetime import current_timestamp, datetime_elapsed
-from ..utils.methods import jsonrpc
+from ..utils.kodi import jsonrpc
 
 
 class ServiceMonitor(xbmc.Monitor):
