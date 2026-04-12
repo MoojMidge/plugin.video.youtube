@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 import json
 import sys
-from atexit import register as atexit_register
 from timeit import default_timer
 from weakref import proxy as weakref_proxy
 
@@ -50,7 +49,7 @@ from ...player import XbmcPlaylistPlayer
 from ...settings import XbmcPluginSettings
 from ...ui import XbmcContextUI
 from ...utils.file_system import make_dirs
-from ...utils.methods import loose_version, wait
+from ...utils.methods import loose_version, register_clean_up, wait
 from ...utils.kodi import get_kodi_setting_bool, get_kodi_setting_value, jsonrpc
 from ...utils.system_version import current_system_version
 
@@ -454,7 +453,19 @@ class XbmcContext(AbstractContext):
         self._playlist = None
         self._settings = None
 
-        atexit_register(self.tear_down)
+        self.clean_up = register_clean_up(
+            ref_obj=self,
+            attrs=(
+                '_ui',
+                '_playlist',
+                '_settings',
+                '_api_store',
+                '_access_manager',
+            ),
+            class_attrs=(
+                '_addon',
+            ),
+        )
 
     def addon(self, clear=False):
         if clear:
@@ -663,8 +674,15 @@ class XbmcContext(AbstractContext):
     def get_addon_path(self):
         return self._addon_path
 
-    def settings(self, refresh=False):
+    def settings(self, refresh=False, clear=False):
         settings = self._settings
+
+        if clear:
+            if settings:
+                settings.clean_up()
+                self._settings = None
+            return None
+
         if not settings:
             addon = self.addon()
             settings = XbmcPluginSettings(addon)
@@ -996,33 +1014,6 @@ class XbmcContext(AbstractContext):
         return XbmcContextUI.get_property(
             ABORT_FLAG, stacklevel=3, as_bool=True
         )
-
-    def tear_down(self):
-        attrs = (
-            '_addon',
-        )
-        for attr in attrs:
-            try:
-                if self._plugin_id != ADDON_ID:
-                    delattr(self, attr)
-                delattr(self.__class__, attr)
-                setattr(self.__class__, attr, None)
-            except AttributeError:
-                pass
-
-        attrs = (
-            '_ui',
-            '_playlist',
-            '_settings',
-            '_api_store',
-            '_access_manager',
-        )
-        for attr in attrs:
-            try:
-                delattr(self, attr)
-                setattr(self, attr, None)
-            except AttributeError:
-                pass
 
     @classmethod
     def ipc_exec(cls,

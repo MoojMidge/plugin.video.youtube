@@ -767,9 +767,6 @@ class AbstractContext(object):
     def abort_requested():
         raise NotImplementedError()
 
-    def tear_down(self):
-        pass
-
     @classmethod
     def ipc_exec(cls,
                  target,

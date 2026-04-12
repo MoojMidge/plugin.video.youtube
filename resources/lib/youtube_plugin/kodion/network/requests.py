@@ -10,7 +10,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import socket
-from atexit import register as atexit_register
 from collections import OrderedDict
 from os.path import exists, isdir
 
@@ -29,7 +28,7 @@ from urllib3.util.ssl_ import create_urllib3_context
 
 from .. import logging
 from ..utils.datetime import imf_fixdate
-from ..utils.methods import generate_hash
+from ..utils.methods import generate_hash, register_clean_up
 
 
 __all__ = (
@@ -172,7 +171,7 @@ class BaseRequestsClass(object):
     log = logging.getLogger(__name__)
 
     _session = CustomSession()
-    atexit_register(_session.close)
+    _clean_up = register_clean_up(func=_session.close)
 
     _context = None
     _verify = True

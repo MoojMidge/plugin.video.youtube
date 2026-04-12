@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from atexit import register as atexit_register
 from functools import partial
 from re import compile as re_compile
 from weakref import proxy as weakref_proxy
@@ -67,6 +66,7 @@ from ..kodion.utils.convert_format import (
     channel_filter_split,
     strip_html_from_text,
 )
+from ..kodion.utils.methods import register_clean_up
 from ..kodion.utils.datetime import now, since_epoch
 
 
@@ -108,7 +108,13 @@ class Provider(AbstractProvider):
             '/(?P<command>[^/]+)/?$',
         )), yt_subscriptions.process)
 
-        atexit_register(self.tear_down)
+        self.clean_up = register_clean_up(
+            ref_obj=self,
+            attrs=(
+                '_resource_manager',
+                '_client',
+            ),
+        )
 
     @staticmethod
     def get_wizard_steps():
@@ -2307,15 +2313,3 @@ class Provider(AbstractProvider):
         else:
             context.get_ui().show_notification(notification, title)
         return True
-
-    def tear_down(self):
-        attrs = (
-            '_resource_manager',
-            '_client',
-        )
-        for attr in attrs:
-            try:
-                delattr(self, attr)
-                setattr(self, attr, None)
-            except (AttributeError, TypeError):
-                pass

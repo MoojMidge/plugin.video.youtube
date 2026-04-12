@@ -10,6 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from atexit import register as atexit_register
+from weakref import ref as weakref_ref
+
+from .. import logging
 from ..compatibility import generate_hash, string_type, xbmc
 
 
@@ -17,6 +21,7 @@ __all__ = (
     'generate_hash',
     'loose_version',
     'merge_dicts',
+    'register_clean_up',
     'wait',
 )
 
@@ -105,9 +110,64 @@ def merge_dicts(*dicts, **kwargs):
     return new_dict
 
 
+def _clean_up(obj=None, weak_ref=None, attrs=None, class_attrs=None):
+    if weak_ref:
+        obj = weak_ref()
+    if obj is None:
+        return
+
+    logging.verbose(('Cleaning up {obj}',
+                     'Attrs:       {attrs}',
+                     'Class attrs: {class_attrs}'),
+                    obj=obj,
+                    attrs=attrs,
+                    class_attrs=class_attrs)
+
+    if class_attrs:
+        if attrs:
+            attrs += class_attrs
+        else:
+            attrs = class_attrs
+
+    if attrs:
+        for name in attrs:
+            try:
+                clean_up = getattr(getattr(obj, name), 'clean_up', None)
+                if clean_up:
+                    clean_up()
+                else:
+                    setattr(obj, name, None)
+            except AttributeError:
+                pass
+
+    if class_attrs:
+        for name in class_attrs:
+            try:
+                obj_class = obj.__class__
+                clean_up = getattr(getattr(obj_class, name), 'clean_up', None)
+                if clean_up:
+                    clean_up()
+                else:
+                    setattr(obj_class, name, None)
+            except AttributeError:
+                pass
 
 
+def register_clean_up(*args, **kwargs):
+    def _func(*_args, **_kwargs):
+        if getattr(_func, '__completed__', False):
+            return
+        func(*args, **kwargs)
+        _func.__completed__ = True
 
+    obj = kwargs.pop('ref_obj', None)
+    if obj:
+        kwargs['weak_ref'] = weakref_ref(obj)
+
+    func = kwargs.pop('func', _clean_up)
+    atexit_register(_func, *args, **kwargs)
+
+    return _func
 
 
 def wait(timeout=None):

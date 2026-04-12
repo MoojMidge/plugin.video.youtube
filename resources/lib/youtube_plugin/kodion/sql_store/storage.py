@@ -13,13 +13,13 @@ from __future__ import absolute_import, division, unicode_literals
 import os
 import sqlite3
 import time
-from atexit import register as atexit_register
 from threading import RLock, Timer
 
 from .. import logging
 from ..compatibility import pickle, to_str
 from ..utils.datetime import fromtimestamp, since_epoch
 from ..utils.file_system import make_dirs
+from ..utils.methods import register_clean_up
 from ..utils.system_version import current_system_version
 
 
@@ -252,7 +252,8 @@ class Storage(object):
         self._close_actions = False
         self._max_item_count = -1 if migrate else max_item_count
         self._max_file_size_kb = -1 if migrate else max_file_size_kb
-        atexit_register(self._close, event='shutdown')
+
+        self.clean_up = register_clean_up(func=self._close, event='shutdown')
 
         if migrate:
             self._base = self

@@ -16,7 +16,7 @@ from ..abstract_playlist_player import AbstractPlaylistPlayer
 from ... import logging
 from ...compatibility import xbmc
 from ...items import VideoItem, media_listitem
-from ...utils.methods import wait
+from ...utils.methods import register_clean_up, wait
 from ...utils.kodi import jsonrpc
 from ...utils.system_version import current_system_version
 
@@ -60,6 +60,14 @@ class XbmcPlaylistPlayer(AbstractPlaylistPlayer):
 
         self._playlist = xbmc.PlayList(playlist_id)
         self._player = player
+
+        self.clean_up = register_clean_up(
+            ref_obj=self,
+            attrs=(
+                '_player',
+                '_playlist',
+            ),
+        )
 
     def clear(self):
         self._playlist.clear()
