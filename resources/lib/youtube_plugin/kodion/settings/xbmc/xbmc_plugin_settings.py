@@ -10,17 +10,24 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-
 from ..abstract_settings import AbstractSettings
 from ... import logging
 from ...constants import BOOL_FROM_STR
 from ...utils.datetime import current_timestamp
+from ...utils.methods import register_clean_up
 from ...utils.system_version import current_system_version
 
 
 class SettingsProxy(object):
     def __init__(self, instance):
         self.ref = instance
+
+        self.clean_up = register_clean_up(
+            ref_obj=self,
+            attrs=(
+                'ref',
+            ),
+        )
 
     if current_system_version.compatible(21):
         def get_bool(self, *args, **kwargs):
@@ -83,6 +90,12 @@ class XbmcPluginSettings(AbstractSettings):
     def __init__(self, xbmc_addon):
         self.init(xbmc_addon)
 
+        self.clean_up = register_clean_up(
+            ref_obj=self,
+            class_attrs=(
+                '_proxy',
+            ),
+        )
 
     def init(self, xbmc_addon):
         self._cache = {}

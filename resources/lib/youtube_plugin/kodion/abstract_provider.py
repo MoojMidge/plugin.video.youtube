@@ -568,6 +568,3 @@ class AbstractProvider(object):
 
     def handle_exception(self, context, exception_to_handle):
         return True
-
-    def tear_down(self):
-        pass
