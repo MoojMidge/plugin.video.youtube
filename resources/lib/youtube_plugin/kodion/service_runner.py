@@ -259,5 +259,5 @@ def run():
     if monitor.httpd:
         monitor.shutdown_httpd(terminate=True)
 
-    provider.tear_down()
-    context.tear_down()
+    provider.clean_up()
+    context.clean_up()
