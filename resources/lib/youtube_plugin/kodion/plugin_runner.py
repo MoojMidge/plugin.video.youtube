@@ -159,5 +159,9 @@ def run(context=_context,
     finally:
         if log_level:
             profiler.print_stats()
+        if not system_version.compatible(19):
+            context.addon(clear=True)
+            context.settings(clear=True)
+            context.playlist_player(clear=True)
         gc.collect()
         gc.set_threshold(*gc_threshold)

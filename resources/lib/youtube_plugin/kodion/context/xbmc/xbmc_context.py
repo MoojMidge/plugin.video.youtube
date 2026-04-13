@@ -646,8 +646,14 @@ class XbmcContext(AbstractContext):
         self._api_store = api_store
         return api_store
 
-    def playlist_player(self, playlist_type=None):
+    def playlist_player(self, playlist_type=None, clear=False):
         playlist_player = self._playlist
+
+        if clear:
+            if playlist_player:
+                playlist_player.clean_up()
+                self._playlist = None
+            return None
 
         if self.get_param(PLAY_FORCE_AUDIO) or self.settings().audio_only():
             playlist_type = 'audio'
