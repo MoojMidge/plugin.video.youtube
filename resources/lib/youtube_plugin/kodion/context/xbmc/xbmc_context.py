@@ -431,13 +431,8 @@ class XbmcContext(AbstractContext):
         self = super(XbmcContext, cls).__new__(cls)
 
         if not cls._initialized:
-            addon = xbmcaddon.Addon(ADDON_ID)
-            cls._addon = addon
-            cls._settings = XbmcPluginSettings(addon)
-
             # Update default allowable params
             cls._NON_EMPTY_STRING_PARAMS.update(self.SEARCH_PARAMS)
-
             cls._initialized = True
 
         return self
@@ -445,25 +440,37 @@ class XbmcContext(AbstractContext):
     def __init__(self,
                  path='/',
                  params=None,
-                 plugin_id=''):
+                 plugin_id=ADDON_ID):
         super(XbmcContext, self).__init__(path, params, plugin_id)
 
-        self._plugin_id = plugin_id or ADDON_ID
-        if self._plugin_id != ADDON_ID:
-            addon = xbmcaddon.Addon(ADDON_ID)
-            self._addon = addon
-            self._settings = XbmcPluginSettings(addon)
-
-        self._addon_path = make_dirs(self._addon.getAddonInfo('path'))
-        self._data_path = make_dirs(self._addon.getAddonInfo('profile'))
-        self._plugin_name = self._addon.getAddonInfo('name')
-        self._plugin_icon = self._addon.getAddonInfo('icon')
-        self._version = self._addon.getAddonInfo('version')
+        addon = self.addon()
+        self._addon_path = make_dirs(addon.getAddonInfo('path'))
+        self._data_path = make_dirs(addon.getAddonInfo('profile'))
+        self._plugin_name = addon.getAddonInfo('name')
+        self._plugin_icon = addon.getAddonInfo('icon')
+        self._version = addon.getAddonInfo('version')
 
         self._ui = None
         self._playlist = None
+        self._settings = None
 
         atexit_register(self.tear_down)
+
+    def addon(self, clear=False):
+        if clear:
+            XbmcContext._addon = None
+            return None
+
+        addon = XbmcContext._addon
+        if not addon:
+            addon = xbmcaddon.Addon(ADDON_ID)
+            XbmcContext._addon = addon
+
+        addon_id = self._plugin_id
+        if addon_id and addon_id != ADDON_ID:
+            addon = xbmcaddon.Addon(addon_id)
+
+        return addon
 
     def init(self):
         num_args = len(sys.argv)
@@ -657,22 +664,16 @@ class XbmcContext(AbstractContext):
         return self._addon_path
 
     def settings(self, refresh=False):
-        if not self._settings:
-            addon_id = self._plugin_id if self._plugin_id != ADDON_ID else None
-            addon = xbmcaddon.Addon(addon_id or ADDON_ID)
+        settings = self._settings
+        if not settings:
+            addon = self.addon()
             settings = XbmcPluginSettings(addon)
-            if addon_id:
-                self._addon = addon
-                self._settings = settings
-            else:
-                self.__class__._addon = addon
-                self.__class__._settings = settings
+            self._settings = settings
         elif refresh:
-            addon_id = self._plugin_id if self._plugin_id != ADDON_ID else None
-            addon = xbmcaddon.Addon(addon_id or ADDON_ID)
-            settings = self._settings
+            addon = self.addon()
             settings.reinit(addon)
-        return self._settings
+
+        return settings
 
     def localize(self, text_id, args=None, default_text=None):
         if isinstance(text_id, tuple):
@@ -707,7 +708,7 @@ class XbmcContext(AbstractContext):
         (see: http://kodi.wiki/view/Language_support), but we do it anyway.
         I want some of the localized strings for the views of a skin.
         """
-        source = self._addon if 30000 <= _text_id < 31000 else xbmc
+        source = self.addon() if 30000 <= _text_id < 31000 else xbmc
         result = source.getLocalizedString(_text_id)
         if not result:
             msg = 'Untranslated string ID: {text_id!r}'
@@ -999,7 +1000,6 @@ class XbmcContext(AbstractContext):
     def tear_down(self):
         attrs = (
             '_addon',
-            '_settings',
         )
         for attr in attrs:
             try:
@@ -1013,6 +1013,7 @@ class XbmcContext(AbstractContext):
         attrs = (
             '_ui',
             '_playlist',
+            '_settings',
             '_api_store',
             '_access_manager',
         )

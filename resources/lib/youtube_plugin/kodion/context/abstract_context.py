@@ -95,7 +95,6 @@ class AbstractContext(object):
 
     _initialized = False
     _addon = None
-    _settings = None
 
     _BOOL_PARAMS = frozenset((
         CONTEXT_MENU,
