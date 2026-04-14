@@ -10,8 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import sys
-
 from ..constants import (
     HIDE_LIVE,
     HIDE_MEMBERS,
@@ -237,10 +235,10 @@ class AbstractSettings(object):
         if value is not None:
             return self.set_bool(SETTINGS.VERIFY_SSL, value)
 
-        if sys.version_info <= (2, 7, 9):
-            verify = False
-        else:
+        if current_system_version.python_compatible(2, 7, 9):
             verify = self.get_bool(SETTINGS.VERIFY_SSL, True)
+        else:
+            verify = False
         return verify
 
     def requests_timeout(self, value=None):
