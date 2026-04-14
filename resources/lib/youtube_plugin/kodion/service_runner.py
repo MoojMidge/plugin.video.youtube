@@ -56,11 +56,11 @@ def run():
     )
 
     system_version = context.get_system_version()
-    logging.info(('Starting v{version}',
+    logging.info(('Starting v{version!s}',
                   'Kodi:    v{kodi}',
                   'Python:  v{python}'),
                  version=context.get_version(),
-                 kodi=str(system_version),
+                 kodi=system_version,
                  python=system_version.get_python_version())
 
     ui = context.get_ui()
