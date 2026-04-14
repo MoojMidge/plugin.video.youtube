@@ -513,13 +513,13 @@ def run(argv):
 
         system_version = context.get_system_version()
         log.info(('Running v{version}',
-                  'Kodi:     v{kodi}',
+                  'Kodi:     v{kodi!s}',
                   'Python:   v{python}',
                   'Category: {category!r}',
                   'Action:   {action!r}',
                   'Params:   {params!r}'),
                  version=context.get_version(),
-                 kodi=str(system_version),
+                 kodi=system_version,
                  python=system_version.get_python_version(),
                  category=category,
                  action=action,

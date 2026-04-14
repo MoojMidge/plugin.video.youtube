@@ -10,10 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from platform import python_version
+from sys import version_info as sys_version_info
 
 from .kodi import jsonrpc
-from ..compatibility import string_type
 
 
 class SystemVersion(object):
@@ -31,48 +30,64 @@ class SystemVersion(object):
         12: 'Frodo',
     }
 
-    def __init__(self, version=None, release_name=None, app_name=None):
-        if isinstance(version, tuple):
-            self._version = version
-        else:
-            version = None
+    def __init__(self):
+        try:
+            result = jsonrpc(
+                method='Application.GetProperties',
+                params={'properties': ['version', 'name']},
+            )['result'] or {}
+        except (KeyError, TypeError):
+            result = {}
+        version = result.get('version') or {}
 
-        if app_name and isinstance(app_name, string_type):
-            self._app_name = app_name
-        else:
-            app_name = None
-
-        if version is None or app_name is None:
+        tag = version.get('tag')
+        if tag == 'stable':
+            tag_version = -1
+        elif tag:
             try:
-                result = jsonrpc(
-                    method='Application.GetProperties',
-                    params={'properties': ['version', 'name']},
-                )['result'] or {}
-            except (KeyError, TypeError):
-                result = {}
-
-            if version is None:
-                version = result.get('version') or {}
-                self._version = (version.get('major', 1),
-                                 version.get('minor', 0))
-
-            if app_name is None:
-                self._app_name = result.get('name', 'Unknown application')
-
-        if release_name and isinstance(release_name, string_type):
-            self._release_name = release_name
+                tag_version = int(version.get('tagversion'))
+            except ValueError:
+                tag_version = 0
         else:
-            self._release_name = self.RELEASE_NAME_MAP.get(self._version[0],
-                                                           'Unknown release')
+            tag = ''
+            tag_version = 0
 
-        self._python_version = python_version()
+        self._version = (
+            version.get('major', 1),
+            version.get('minor', 0),
+            tag,
+            tag_version
+        )
+
+        self._app_name = result.get('name', 'Unknown application')
+
+        self._release_name = self.RELEASE_NAME_MAP.get(
+            self._version[0],
+            'Unknown release',
+        )
+
+        tag_str = ' '.join((
+            tag,
+            str(tag_version) if tag_version > 0 else ''
+        )).strip()
+
+        self._version_str = '{major}.{minor}{_}{tag} ({app} {release})'.format(
+            major=self._version[0],
+            minor=self._version[1],
+            _=' ' if tag_str else '',
+            tag=tag_str,
+            app=self._app_name,
+            release=self._release_name,
+        )
+
+        self._python_version = sys_version_info
+        self._python_version_str = '{0}.{1}.{2} {3}'.format(*sys_version_info)
 
     def __str__(self):
-        return '{version[0]}.{version[1]} ({app_name} {release_name})'.format(
-            release_name=self._release_name,
-            app_name=self._app_name,
-            version=self._version
-        )
+        return self._version_str
+
+    def get_app_name(self):
+        return self._app_name
 
     def get_release_name(self):
         return self._release_name
@@ -80,14 +95,14 @@ class SystemVersion(object):
     def get_version(self):
         return self._version
 
-    def get_app_name(self):
-        return self._app_name
-
-    def get_python_version(self):
-        return self._python_version
-
     def compatible(self, *version):
         return self._version >= version
+
+    def get_python_version(self):
+        return self._python_version_str
+
+    def python_compatible(self, *version):
+        return self._python_version >= version
 
 
 current_system_version = SystemVersion()
