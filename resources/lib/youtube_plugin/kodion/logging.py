@@ -176,23 +176,34 @@ class PrettyPrintFormatter(Formatter):
     _pretty_printer = VariableWidthPrettyPrinter(indent=4, width=160)
 
     def convert_field(self, value, conversion):
+        pretty_printer = self._pretty_printer
+
         # redact headers
         if conversion == 'h':
-            return self._pretty_printer.pformat(redact_auth_header(value))
+            return pretty_printer.pformat(redact_auth_header(value))
+
         # redact setting
         if conversion == 'q':
-            return self._pretty_printer.pformat(redact_params(value))[1:-1]
+            return pretty_printer.pformat(redact_params(value))[1:-1]
+
         # pretty printed repr
         if conversion == 'r':
-            return self._pretty_printer.pformat(value)
+            return pretty_printer.pformat(value)
+
         # redact params
         if conversion == 'p':
-            return self._pretty_printer.pformat(redact_params(value))
+            return pretty_printer.pformat(redact_params(value))
+
         if conversion in {'d', 'e', 't', 'u', 'w'}:
-            _sort_dicts = sort_dicts = getattr(self._pretty_printer,
-                                               '_sort_dicts',
-                                               None)
-            width = self._pretty_printer._width
+            _compact = None
+            compact = getattr(pretty_printer, '_compact', None)
+
+            _sort_dicts = None
+            sort_dicts = getattr(pretty_printer, '_sort_dicts', None)
+
+            _width = None
+            width = pretty_printer._width
+
             # __dict__
             if conversion == 'd':
                 if sort_dicts:
@@ -205,13 +216,18 @@ class PrettyPrintFormatter(Formatter):
                             attr: getattr(value, attr, None)
                             for attr in dir(value)
                         }
+
             # eval iterators
             elif conversion == 'e':
                 if (getattr(value, '__iter__', None)
                         and not getattr(value, '__len__', None)):
                     value = tuple(value)
+                if not compact:
+                    _compact = True
                 if sort_dicts:
                     _sort_dicts = False
+                _width = 2 * width
+
             # text representation
             elif conversion == 't':
                 try:
@@ -220,21 +236,45 @@ class PrettyPrintFormatter(Formatter):
                         _sort_dicts = False
                 except AttributeError:
                     pass
+
             # redact uri
             elif conversion == 'u':
                 value = parse_and_redact_uri(value, redact_only=True)
                 if sort_dicts:
                     _sort_dicts = False
+
             # wide output
             elif conversion == 'w':
-                self._pretty_printer._width = 2 * width
-            if _sort_dicts != sort_dicts:
-                self._pretty_printer._sort_dicts = _sort_dicts
-            out = self._pretty_printer.pformat(value)
-            if sort_dicts:
-                self._pretty_printer._sort_dicts = sort_dicts
-            self._pretty_printer._width = width
+                _width = 2 * width
+
+            if _compact is None:
+                compact = None
+            else:
+                pretty_printer._compact = _compact
+
+            if _sort_dicts is None:
+                sort_dicts = None
+            else:
+                pretty_printer._sort_dicts = _sort_dicts
+
+            if _width is None:
+                width = None
+            else:
+                pretty_printer._width = _width
+
+            out = pretty_printer.pformat(value)
+
+            if compact is not None:
+                pretty_printer._compact = compact
+
+            if sort_dicts is not None:
+                pretty_printer._sort_dicts = sort_dicts
+
+            if width is not None:
+                pretty_printer._width = width
+
             return out
+
         return super(PrettyPrintFormatter, self).convert_field(
             value,
             conversion,
