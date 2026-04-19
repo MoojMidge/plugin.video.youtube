@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import defaultdict
 from json import dumps as json_dumps
 from random import shuffle as random_shuffle
 
@@ -387,19 +386,12 @@ def _select_stream(context,
     num_streams = len(stream_list)
 
     if logging.debugging:
-        def _default_NA():
-            return 'N/A'
-
         logging.debug('%d available stream(s)', num_streams)
-        for idx, stream in enumerate(stream_list):
-            logging.debug(('Stream {idx}',
-                           'Container: {stream[container]}',
-                           'Adaptive:  {stream[adaptive]}',
-                           'Audio:     {stream[audio]}',
-                           'Video:     {stream[video]}',
-                           'Sort:      {stream[sort]}'),
+        _keys = ('container', 'adaptive', 'audio', 'video', 'sort')
+        for idx, stream in enumerate(stream_list, start=1):
+            logging.debug('Stream {idx}: {stream!e}',
                           idx=idx,
-                          stream=defaultdict(_default_NA, stream))
+                          stream=zip(_keys, map(stream.get, _keys)))
 
     if ask_for_quality and num_streams > 1:
         selected_stream = context.get_ui().on_select(
@@ -412,7 +404,7 @@ def _select_stream(context,
     else:
         selected_stream = 0
 
-    logging.debug('Stream %d selected', selected_stream)
+    logging.debug('Stream %d selected', selected_stream + 1)
     return stream_list[selected_stream]
 
 
