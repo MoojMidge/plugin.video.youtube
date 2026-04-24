@@ -283,50 +283,61 @@ class BaseRequestsClass(object):
         else:
             raise new_exception(*args, **kwargs)
 
-    def _response_hook_json(self, **kwargs):
+    def _response_hook(self, **kwargs):
         response = kwargs['response']
         if response is None:
             return None, None
+
         with response:
-            try:
-                json_data = response.json()
-                if 'error' in json_data:
-                    kwargs.setdefault('pass_data', True)
-                    kwargs.setdefault('json_data', json_data)
-                    json_data.setdefault('code', response.status_code)
+            if kwargs.get('_json_response', False):
+                try:
+                    result = response.json()
+                    etag = result.get('etag')
+
+                    if 'error' in result:
+                        kwargs.setdefault('pass_data', True)
+                        kwargs.setdefault('json_data', result)
+                        result.setdefault('code', response.status_code)
+                        self._raise_exception(
+                            kwargs.get('exception', RequestException),
+                            '"error" in response JSON data',
+                            **kwargs
+                        )
+                except ValueError as exc:
+                    if kwargs.get('raise_exc') is None:
+                        kwargs['raise_exc'] = True
                     self._raise_exception(
-                        kwargs.get('exception', RequestException),
-                        '"error" in response JSON data',
+                        InvalidJSONError,
+                        exc,
                         **kwargs
                     )
-            except ValueError as exc:
-                if kwargs.get('raise_exc') is None:
-                    kwargs['raise_exc'] = True
-                self._raise_exception(
-                    InvalidJSONError,
-                    exc,
-                    **kwargs
+
+                response.raise_for_status()
+            else:
+                response.raise_for_status()
+
+                result = response and response.text
+                etag = None
+
+                if not result:
+                    self._raise_exception(
+                        kwargs.get('exception', RequestException),
+                        'Empty response text',
+                        **kwargs
+                    )
+
+            if kwargs.get('_response_details', False):
+                return (
+                    etag,
+                    {
+                        'status_code': response.status_code,
+                        'reason': response.reason,
+                        'cookies': response.cookies,
+                        'headers': response.headers,
+                        'content': result,
+                    },
                 )
-
-            response.raise_for_status()
-
-        return json_data.get('etag'), json_data
-
-    def _response_hook_text(self, **kwargs):
-        response = kwargs['response']
-        if response is None:
-            return None, None
-        with response:
-            response.raise_for_status()
-            result = response and response.text
-        if not result:
-            self._raise_exception(
-                kwargs.get('exception', RequestException),
-                'Empty response text',
-                **kwargs
-            )
-
-        return None, result
+            return etag, result
 
     def request(self, url=None, method='GET',
                 params=None, data=None, headers=None, cookies=None, files=None,

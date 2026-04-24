@@ -1038,7 +1038,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             return None
 
         result = self.request(
-            response_hook=self._response_hook_text,
+            response_hook=self._response_hook,
             error_title='Failed to get player html',
             error_hook=self._player_error_hook,
             video_id=video_id,
@@ -1139,7 +1139,7 @@ class YouTubePlayerClient(YouTubeDataClient):
         result = self.request(
             js_url,
             headers=client['headers'],
-            response_hook=self._response_hook_text,
+            response_hook=self._response_hook,
             error_title='Failed to get player JavaScript',
             error_hook=self._player_error_hook,
             video_id=self.video_id,
@@ -1256,7 +1256,7 @@ class YouTubePlayerClient(YouTubeDataClient):
             result = self.request(
                 url,
                 headers=headers,
-                response_hook=self._response_hook_text,
+                response_hook=self._response_hook,
                 error_title='Failed to get HLS manifest',
                 error_hook=self._player_error_hook,
                 video_id=self.video_id,
@@ -1608,7 +1608,10 @@ class YouTubePlayerClient(YouTubeDataClient):
             if not client:
                 continue
             result = self.request(
-                response_hook=self._response_hook_json,
+                response_hook=self._response_hook,
+                event_hook_kwargs={
+                    '_json_response': True,
+                },
                 error_title='Caption player request failed',
                 error_hook=self._player_error_hook,
                 video_id=video_id,
@@ -1805,7 +1808,8 @@ class YouTubePlayerClient(YouTubeDataClient):
                         continue
 
                     _result = self.request(
-                        response_hook=self._response_hook_json,
+                        response_hook=self._response_hook,
+                        event_hook_kwargs={'_json_response': True},
                         error_title='Player request failed',
                         error_hook=self._player_error_hook,
                         video_id=video_id,
