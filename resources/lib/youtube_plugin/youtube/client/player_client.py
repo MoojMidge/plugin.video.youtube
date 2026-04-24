@@ -2243,7 +2243,85 @@ class YouTubePlayerClient(YouTubeDataClient):
         localize = context.localize
 
         debugging = self.log.debugging
-        sep = {'__sep__': '   '}
+        log_audio = False
+        log_video = False
+        if debugging:
+            log_msg = []
+            log_kwargs = {
+                '_': ('=', '=', '^', 90),
+                '_c1': ('ID', ' ', '^', 3),
+                '_c2': ('TYPE', ' ', '^', 4),
+                '_ac3': ('CH', ' ', '^', 5),
+                '_ac4': ('ABR', ' ', '^', 8),
+                '_ac5': ('ASR', ' ', '^', 9),
+                '_ac6': ('DRC', ' ', '^', 3),
+                '_ac7': ('CODECS', ' ', '^', 15),
+                '_ac8': ('INFO', ' ', '^', 22),
+                '_vc3_1': ('W', ' ', '>', 4),
+                '_vc3_2': ('H', ' ', '<', 4),
+                '_vc4': ('FPS', ' ', '^', 6),
+                '_vc5': ('HDR', ' ', '^', 3),
+                '_vc6': ('3D', ' ', '^', 3),
+                '_vc7': ('VR', ' ', '^', 3),
+                '_vc8': ('VBR', ' ', '^', 12),
+                '_vc9': ('CODECS', ' ', '^', 22),
+            }
+            log_client_header = 'Streams found for {client!r} client:'
+            log_audio_header = (
+                '{_[0]:{_[1]}{_[2]}{_[3]}}',
+                '{_c1[0]:{_c1[1]}{_c1[2]}{_c1[3]}}'
+                ' | {_c2[0]:{_c2[1]}{_c2[2]}{_c2[3]}}'
+                ' | {_ac3[0]:{_ac3[1]}{_ac3[2]}{_ac3[3]}}'
+                ' | {_ac4[0]:{_ac4[1]}{_ac4[2]}{_ac4[3]}}'
+                ' | {_ac5[0]:{_ac5[1]}{_ac5[2]}{_ac5[3]}}'
+                ' | {_ac6[0]:{_ac6[1]}{_ac6[2]}{_ac6[3]}}'
+                ' | {_ac7[0]:{_ac7[1]}{_ac7[2]}{_ac7[3]}}'
+                ' | {_ac8[0]:{_ac8[1]}{_ac8[2]}{_ac8[3]}}',
+                '{_[0]:{_[1]}{_[2]}{_[3]}}',
+            )
+            log_audio_stream = (
+                '{itag:3}'
+                ' | {container:4}'
+                ' | {channels:2} ch'
+                ' | {bitrate:3} kbps'
+                ' | {sample_rate:<5.2f} kHz'
+                ' | {drc:^3}'
+                ' | {codecs:15}'
+                ' | {language} {role_type}'
+            )
+            log_video_header = (
+                '{_[0]:{_[1]}{_[2]}{_[3]}}',
+                '{_c1[0]:{_c1[1]}{_c1[2]}{_c1[3]}}'
+                ' | {_c2[0]:{_c2[1]}{_c2[2]}{_c2[3]}}'
+                ' | {_vc3_1[0]:{_vc3_1[1]}{_vc3_1[2]}{_vc3_1[3]}}'
+                ' x {_vc3_2[0]:{_vc3_2[1]}{_vc3_2[2]}{_vc3_2[3]}}'
+                ' | {_vc4[0]:{_vc4[1]}{_vc4[2]}{_vc4[3]}}'
+                ' | {_vc5[0]:{_vc5[1]}{_vc5[2]}{_vc5[3]}}'
+                ' | {_vc6[0]:{_vc6[1]}{_vc6[2]}{_vc6[3]}}'
+                ' | {_vc7[0]:{_vc7[1]}{_vc7[2]}{_vc7[3]}}'
+                ' | {_vc8[0]:{_vc8[1]}{_vc8[2]}{_vc8[3]}}'
+                ' | {_vc9[0]:{_vc9[1]}{_vc9[2]}{_vc9[3]}}',
+                '{_[0]:{_[1]}{_[2]}{_[3]}}',
+            )
+            log_video_stream = (
+                '{itag:3}'
+                ' | {container:4}'
+                ' | {width:>4} x {height:<4}'
+                ' | {fps:2} fps'
+                ' | {hdr:^3}'
+                ' | {s3d:^3}'
+                ' | {vr:^3}'
+                ' | {bitrate:7,} kbps'
+                ' | {codecs}'
+            )
+        else:
+            log_msg = None
+            log_kwargs = None
+            log_client_header = None
+            log_audio_header = None
+            log_audio_stream = None
+            log_video_header = None
+            log_video_stream = None
 
         audio_data = {}
         video_data = {}
@@ -2265,10 +2343,6 @@ class YouTubePlayerClient(YouTubeDataClient):
             stream_data = response['adaptive_fmts']
             if not stream_data:
                 continue
-
-            log_client = debugging
-            log_audio_header = None
-            log_video_header = None
 
             for stream in stream_data:
                 mime_type = stream.get('mimeType')
@@ -2415,10 +2489,24 @@ class YouTubePlayerClient(YouTubeDataClient):
                     height = width = fps = frame_rate = None
                     is_hdr = is_vr = is_3d = None
 
-                    log_audio = debugging
-                    log_video = False
-                    if log_audio_header is None:
-                        log_audio_header = debugging
+                    if debugging:
+                        if not log_msg:
+                            log_msg.append(log_client_header)
+                        if not log_audio:
+                            log_audio = True
+                            log_video = False
+                            log_msg.extend(log_audio_header)
+                        log_msg.append(log_audio_stream.format(
+                            itag=itag_id,
+                            container=container,
+                            channels=channels,
+                            bitrate=bitrate // 1000,
+                            sample_rate=sample_rate / 1000,
+                            drc='Y' if is_drc else '-',
+                            codecs=codecs,
+                            language=language,
+                            role_type=role_type,
+                        ))
                 elif audio_only:
                     continue
                 else:
@@ -2515,10 +2603,26 @@ class YouTubePlayerClient(YouTubeDataClient):
                     channels = sample_rate = is_drc = is_spa = None
                     language = role = role_order = role_type = None
 
-                    log_audio = False
-                    log_video = debugging
-                    if log_video_header is None:
-                        log_video_header = debugging
+                    if debugging:
+                        if not log_msg:
+                            log_msg.append(log_client_header)
+                        if not log_video:
+                            log_audio = False
+                            log_video = True
+                            log_msg.extend(log_video_header)
+                        log_msg.append(log_video_stream.format(
+                            itag=itag_id,
+                            container=container,
+                            width=width,
+                            height=height,
+                            fps=fps,
+                            hdr='Y' if is_hdr else '-',
+                            s3d='Y' if is_3d else '-',
+                            vr='Y' if is_vr else '-',
+                            bitrate=bitrate // 1000,
+                            codec=codec,
+                            codecs=codecs,
+                        ))
 
                 urls = self._process_url_params(
                     unquote(url),
@@ -2566,98 +2670,13 @@ class YouTubePlayerClient(YouTubeDataClient):
                 quality_group = data.setdefault(quality_group, {})
                 mime_group[itag] = quality_group[itag] = details
 
-                if log_client:
-                    self.log.debug('{_:{_}^100}', _='=', extra=sep)
-                    self.log.debug('Streams found for %r client:',
-                                   client_name,
-                                   extra=sep)
-                    log_client = False
-                if log_audio:
-                    if log_audio_header:
-                        self.log.debug('{_:{_}^100}', _='-', extra=sep)
-                        self.log.debug('{itag:^3}'
-                                       ' | {container:^4}'
-                                       ' | {channels:^5}'
-                                       ' | {bitrate:^8}'
-                                       ' | {sample_rate:^9}'
-                                       ' | {drc:^3}'
-                                       ' | {codecs:^19}'
-                                       ' | {info}',
-                                       itag='ID',
-                                       container='TYPE',
-                                       channels='CH',
-                                       bitrate='ABR',
-                                       sample_rate='ASR',
-                                       drc='DRC',
-                                       codecs='CODECS',
-                                       info='INFO',
-                                       extra=sep)
-                        self.log.debug('{_:{_}^100}', _='-', extra=sep)
-                        log_audio_header = False
-                    self.log.debug('{itag:3}'
-                                   ' | {container:4}'
-                                   ' | {channels:2} ch'
-                                   ' | {bitrate:3} kbps'
-                                   ' | {sample_rate:<5.2f} kHz'
-                                   ' | {drc:^3}'
-                                   ' | {codecs:19}'
-                                   ' | {language}'
-                                   ' {role_type}',
-                                   itag=itag_id,
-                                   container=container,
-                                   channels=channels,
-                                   bitrate=bitrate // 1000,
-                                   sample_rate=sample_rate / 1000,
-                                   drc='Y' if is_drc else '-',
-                                   codecs='%s (%s)' % (codec, codecs),
-                                   language=language,
-                                   role_type=role_type,
-                                   extra=sep)
-                elif log_video:
-                    if log_video_header:
-                        self.log.debug('{_:{_}^100}', _='-', extra=sep)
-                        self.log.debug('{itag:^3}'
-                                       ' | {container:^4}'
-                                       ' | {width:>4} x {height:<4}'
-                                       ' | {fps:^6}'
-                                       ' | {hdr:^3}'
-                                       ' | {s3d:^3}'
-                                       ' | {vr:^3}'
-                                       ' | {bitrate:^11}'
-                                       ' | {codecs}',
-                                       itag='ID',
-                                       container='TYPE',
-                                       width='W',
-                                       height='H',
-                                       fps='FPS',
-                                       hdr='HDR',
-                                       s3d='3D',
-                                       vr='VR',
-                                       bitrate='VBR',
-                                       codecs='CODECS',
-                                       extra=sep)
-                        self.log.debug('{_:{_}^100}', _='-', extra=sep)
-                        log_video_header = False
-                    self.log.debug('{itag:3}'
-                                   ' | {container:4}'
-                                   ' | {width:>4} x {height:<4}'
-                                   ' | {fps:2} fps'
-                                   ' | {hdr:^3}'
-                                   ' | {s3d:^3}'
-                                   ' | {vr:^3}'
-                                   ' | {bitrate:6,} kbps'
-                                   ' | {codecs}',
-                                   itag=itag_id,
-                                   container=container,
-                                   width=width,
-                                   height=height,
-                                   fps=fps,
-                                   hdr='Y' if is_hdr else '-',
-                                   s3d='Y' if is_3d else '-',
-                                   vr='Y' if is_vr else '-',
-                                   bitrate=bitrate // 1000,
-                                   codecs='%s (%s)' % (codec, codecs),
-                                   extra=sep)
+            if log_msg:
+                self.log.debug(
+                    log_msg,
+                    client=client_name,
+                    **log_kwargs
+                )
+                log_msg = []
 
         if not video_data and not audio_only:
             self.log.debug('No video mime-types found')
