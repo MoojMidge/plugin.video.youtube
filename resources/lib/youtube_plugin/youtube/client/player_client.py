@@ -1155,13 +1155,25 @@ class YouTubePlayerClient(YouTubeDataClient):
         return result
 
     @staticmethod
-    def _prepare_headers(headers, cookies=None, new_headers=None):
-        if cookies or new_headers:
+    def _prepare_headers(
+        headers,
+        cookies=None,
+        new_headers=None,
+        modify_original=False,
+        update_existing=True,
+    ):
+        if not modify_original and cookies or new_headers:
             headers = headers.copy()
         if cookies:
             headers['Cookie'] = '; '.join([
                 '='.join((cookie.name, cookie.value)) for cookie in cookies
             ])
+        if new_headers and not update_existing:
+            new_headers = {
+                name: value
+                for name, value in new_headers.items()
+                if name not in headers and value is not ValueError
+            }
         if new_headers:
             headers.update(new_headers)
         return headers
@@ -1462,6 +1474,7 @@ class YouTubePlayerClient(YouTubeDataClient):
                             url,
                             stream_proxy=False,
                             mpd_manifest=False,
+                            cookies=None,
                             headers=None,
                             cpn=False,
                             referrer=None,
@@ -1506,17 +1519,28 @@ class YouTubePlayerClient(YouTubeDataClient):
                 snippet['publishedAt'] = modified
 
         if headers:
-            if visitor_data is not False:
-                headers.setdefault(
-                    'X-Goog-Visitor-Id',
-                    visitor_data or self._visitor_data[self._visitor_data_key],
-                )
-            if referrer is not False:
-                headers.setdefault(
-                    'Referer',
-                    referrer
-                    or 'https://www.youtube.com/watch?v=%s' % self.video_id,
-                )
+            headers = self._prepare_headers(
+                headers,
+                cookies=cookies,
+                new_headers={
+                    'X-Goog-Visitor-Id': (
+                        ValueError
+                        if visitor_data is False else
+                        self._visitor_data[self._visitor_data_key]
+                        if visitor_data is None else
+                        visitor_data
+                    ),
+                    'Referer': (
+                        ValueError
+                        if referrer is False else
+                        'https://www.youtube.com/watch?v=%s' % self.video_id
+                        if referrer is None else
+                        referrer
+                    ),
+                },
+                modify_original=True,
+                update_existing=False,
+            )
 
         if stream_proxy:
             new_params['__id'] = self.video_id
