@@ -2364,6 +2364,13 @@ class YouTubePlayerClient(YouTubeDataClient):
                 url = stream.get('url')
                 if not url and 'signatureCipher' in stream:
                     url = self._process_signature_cipher(stream)
+                if url:
+                    url = self._process_url_params(
+                        unquote(url),
+                        stream_proxy=True,
+                        headers=client['headers'],
+                        cpn=client.get('_cpn'),
+                    )
                 if not url:
                     continue
 
@@ -2624,18 +2631,9 @@ class YouTubePlayerClient(YouTubeDataClient):
                             codecs=codecs,
                         ))
 
-                urls = self._process_url_params(
-                    unquote(url),
-                    stream_proxy=True,
-                    headers=client['headers'],
-                    cpn=client.get('_cpn'),
-                )
-                if not urls:
-                    continue
-
                 details = {
                     'mimeType': mime_type,
-                    'baseUrl': entity_escape(urls),
+                    'baseUrl': entity_escape(url),
                     'mediaType': media_type,
                     'container': container,
                     'codecs': codecs,
