@@ -1,5 +1,10 @@
+## v7.4.4+beta.2
+### Fixed
+- Fix using unimplemented change to localisation identifier when showing API config page address
+
 ## v7.4.4+beta.1
 ### Fixed
+- Fix play uri parameters/properties not being able to be forced off
 - Limit retrying feeds that cannot be accessed #1425
 
 ### New
