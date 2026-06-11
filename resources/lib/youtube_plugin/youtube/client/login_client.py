@@ -18,9 +18,14 @@ from ...kodion import logging
 class YouTubeLoginClient(YouTubeRequestClient):
     log = logging.getLogger(__name__)
 
-    DEVICE_CODE_URL = 'https://accounts.google.com/o/oauth2/device/code'
-    REVOKE_URL = 'https://accounts.google.com/o/oauth2/revoke'
-    TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
+    _AUTH_SERVER = 'https://oauth2.googleapis.com/'
+    DEVICE_CODE_URL = _AUTH_SERVER + 'device/code'
+    REVOKE_URL = _AUTH_SERVER + 'revoke'
+    TOKEN_URL = _AUTH_SERVER + 'token'
+
+    _AUTH_REQUEST_HEADERS = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+    }
 
     TOKEN_TYPES_MAP = {}
     _configs = {}
@@ -155,21 +160,20 @@ class YouTubeLoginClient(YouTubeRequestClient):
             return None, None, None, json_data, InvalidGrant(json_data)
         return None, None, None, json_data, LoginException(json_data)
 
-    def revoke(self, refresh_token):
-        # https://developers.google.com/youtube/v3/guides/auth/devices
-        headers = {'Host': 'accounts.google.com',
-                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                                 ' AppleWebKit/537.36 (KHTML, like Gecko)'
-                                 ' Chrome/61.0.3163.100 Safari/537.36',
-                   'Content-Type': 'application/x-www-form-urlencoded'}
+    def revoke(self, token):
+        if not token:
+            return
 
-        post_data = {'token': refresh_token}
+        # https://developers.google.com/youtube/v3/guides/auth/devices
+        post_data = {
+            'token': token,
+        }
 
         self.request(
             self.REVOKE_URL,
             method='POST',
             data=post_data,
-            headers=headers,
+            headers=self._AUTH_REQUEST_HEADERS,
             response_hook=self._response_hook,
             event_hook_kwargs={'_json_response': True},
             error_hook=self._login_error_hook,
@@ -177,28 +181,27 @@ class YouTubeLoginClient(YouTubeRequestClient):
             raise_exc=True,
         )
 
-    def refresh_token(self, token_type, refresh_token=None):
+    def refresh_token(self, token_type, refresh_token):
+        if not refresh_token:
+            return None
+
         login_type = self.TOKEN_TYPES_MAP.get(token_type)
         config = self._configs.get(login_type)
-        if config:
-            client_id = config.get('id')
-            client_secret = config.get('secret')
-        else:
+        if not config:
             return None
-        if not client_id or not client_secret or not refresh_token:
+
+        client_id = config.get('id')
+        client_secret = config.get('secret')
+        if not client_id or not client_secret:
             return None
 
         # https://developers.google.com/youtube/v3/guides/auth/devices
-        headers = {'Host': 'www.googleapis.com',
-                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                                 ' AppleWebKit/537.36 (KHTML, like Gecko)'
-                                 ' Chrome/61.0.3163.100 Safari/537.36',
-                   'Content-Type': 'application/x-www-form-urlencoded'}
-
-        post_data = {'client_id': client_id,
-                     'client_secret': client_secret,
-                     'refresh_token': refresh_token,
-                     'grant_type': 'refresh_token'}
+        post_data = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'refresh_token': refresh_token,
+            'grant_type': 'refresh_token',
+        }
 
         log_info = '{login_type} request: {log_params!p}'
         self.log.debug(
@@ -211,7 +214,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
             self.TOKEN_URL,
             method='POST',
             data=post_data,
-            headers=headers,
+            headers=self._AUTH_REQUEST_HEADERS,
             response_hook=self._response_hook,
             event_hook_kwargs={'_json_response': True},
             error_hook=self._login_error_hook,
@@ -223,28 +226,27 @@ class YouTubeLoginClient(YouTubeRequestClient):
         )
         return json_data
 
-    def request_access_token(self, token_type, code=None):
+    def request_access_token(self, token_type, device_code):
+        if not device_code:
+            return None
+
         login_type = self.TOKEN_TYPES_MAP.get(token_type)
         config = self._configs.get(login_type)
-        if config:
-            client_id = config.get('id')
-            client_secret = config.get('secret')
-        else:
+        if not config:
             return None
-        if not client_id or not client_secret or not code:
+
+        client_id = config.get('id')
+        client_secret = config.get('secret')
+        if not client_id or not client_secret:
             return None
 
         # https://developers.google.com/youtube/v3/guides/auth/devices
-        headers = {'Host': 'www.googleapis.com',
-                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                                 ' AppleWebKit/537.36 (KHTML, like Gecko)'
-                                 ' Chrome/61.0.3163.100 Safari/537.36',
-                   'Content-Type': 'application/x-www-form-urlencoded'}
-
-        post_data = {'client_id': client_id,
-                     'client_secret': client_secret,
-                     'code': code,
-                     'grant_type': 'http://oauth.net/grant_type/device/1.0'}
+        post_data = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'code': device_code,
+            'grant_type': 'http://oauth.net/grant_type/device/1.0',
+        }
 
         log_info = '{login_type} request: {log_params!p}'
         self.log.debug(
@@ -257,7 +259,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
             self.TOKEN_URL,
             method='POST',
             data=post_data,
-            headers=headers,
+            headers=self._AUTH_REQUEST_HEADERS,
             response_hook=self._response_hook,
             event_hook_kwargs={'_json_response': True},
             error_hook=self._login_error_hook,
@@ -272,22 +274,18 @@ class YouTubeLoginClient(YouTubeRequestClient):
     def request_device_and_user_code(self, token_type):
         login_type = self.TOKEN_TYPES_MAP.get(token_type)
         config = self._configs.get(login_type)
-        if config:
-            client_id = config.get('id')
-        else:
+        if not config:
             return None
+
+        client_id = config.get('id')
         if not client_id:
             return None
 
         # https://developers.google.com/youtube/v3/guides/auth/devices
-        headers = {'Host': 'accounts.google.com',
-                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                                 ' AppleWebKit/537.36 (KHTML, like Gecko)'
-                                 ' Chrome/61.0.3163.100 Safari/537.36',
-                   'Content-Type': 'application/x-www-form-urlencoded'}
-
-        post_data = {'client_id': client_id,
-                     'scope': 'https://www.googleapis.com/auth/youtube'}
+        post_data = {
+            'client_id': client_id,
+            'scope': 'https://www.googleapis.com/auth/youtube',
+        }
 
         log_info = '{login_type} request: {log_params!p}'
         self.log.debug(
@@ -300,7 +298,7 @@ class YouTubeLoginClient(YouTubeRequestClient):
             self.DEVICE_CODE_URL,
             method='POST',
             data=post_data,
-            headers=headers,
+            headers=self._AUTH_REQUEST_HEADERS,
             response_hook=self._response_hook,
             event_hook_kwargs={'_json_response': True},
             error_hook=self._login_error_hook,

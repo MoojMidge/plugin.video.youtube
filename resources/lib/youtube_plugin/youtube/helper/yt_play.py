@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from json import dumps as json_dumps
 from random import shuffle as random_shuffle
 
-from ..helper import utils, v3
+from ..helper import utils
 from ..youtube_exceptions import YouTubeException
 from ...kodion import logging
 from ...kodion.compatibility import string_type, urlencode, urlunsplit, xbmc
@@ -144,11 +144,7 @@ def _play_stream(provider, context, video_id=None, reload=False):
     if (not reload
             and not screensaver
             and settings.get_bool(settings.PLAY_SUGGESTED)):
-        utils.add_related_video_to_playlist(provider,
-                                            context,
-                                            client,
-                                            v3,
-                                            video_id)
+        utils.add_related_video_to_playlist(provider, context, client, video_id)
 
     metadata = stream.get('meta', {})
     if is_external:
@@ -274,11 +270,13 @@ def _play_playlist(provider, context):
 
         # start the loop and fill the list with video items
         for chunk in chunks:
-            result = v3.response_to_items(provider,
-                                          context,
-                                          chunk,
-                                          process_next_page=False,
-                                          hide_progress=True)
+            result = provider.response_to_items(
+                provider,
+                context,
+                chunk,
+                process_next_page=False,
+                hide_progress=True,
+            )
             video_items.extend(result)
 
             progress_dialog.update(steps=len(result))
@@ -321,10 +319,12 @@ def _play_channel_live(provider, context):
     if not json_data.get('items'):
         return _play_playlist(provider, context)
 
-    channel_streams = v3.response_to_items(provider,
-                                           context,
-                                           json_data,
-                                           process_next_page=False)
+    channel_streams = provider.response_to_items(
+        provider,
+        context,
+        json_data,
+        process_next_page=False,
+    )
     if not channel_streams:
         return False
 

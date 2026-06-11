@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from ..helper import v3
 from ...kodion import KodionException
 from ...kodion.constants import (
     CATEGORY_LABEL,
@@ -30,7 +29,7 @@ def _process_list(provider, context, client):
     if not json_data:
         return []
 
-    result = v3.response_to_items(provider, context, json_data)
+    result = provider.response_to_items(provider, context, json_data)
     options = {
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.LIST_CONTENT,

@@ -73,6 +73,8 @@ from ..kodion.utils.datetime import now, since_epoch
 class Provider(AbstractProvider):
     log = logging.getLogger(__name__)
 
+    response_to_items = staticmethod(v3.response_to_items)
+
     def __init__(self):
         super(Provider, self).__init__()
         self._resource_manager = None
@@ -452,7 +454,7 @@ class Provider(AbstractProvider):
         if result and 'items' in json_data:
             result.extend(json_data['items'])
             json_data['items'] = result
-        result = v3.response_to_items(provider, context, json_data)
+        result = provider.response_to_items(provider, context, json_data)
         options = {
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.LIST_CONTENT,
@@ -554,7 +556,7 @@ class Provider(AbstractProvider):
             live_streams['items'].extend(json_data['items'])
             json_data['items'] = live_streams['items']
 
-        result = v3.response_to_items(
+        result = provider.response_to_items(
             provider, context, json_data,
             allow_duplicates=False,
             item_filter={
@@ -620,7 +622,7 @@ class Provider(AbstractProvider):
         if not json_data:
             return False, None
 
-        result = v3.response_to_items(
+        result = provider.response_to_items(
             provider, context, json_data,
             item_filter={
                 'shorts': True,
@@ -678,7 +680,7 @@ class Provider(AbstractProvider):
         if not json_data:
             return False, None
 
-        result = v3.response_to_items(provider, context, json_data)
+        result = provider.response_to_items(provider, context, json_data)
         options = {
             provider.CONTENT_TYPE: {
                 'content_type': CONTENT.VIDEO_CONTENT,
@@ -839,7 +841,9 @@ class Provider(AbstractProvider):
                     } if uploads and not params.get(HIDE_MEMBERS) else None,
                 ],
             }
-            result.extend(v3.response_to_items(provider, context, v3_response))
+            result.extend(provider.response_to_items(
+                provider, context, v3_response
+            ))
 
         if uploads:
             # The "UULF" videos playlist can only be used if videos in a channel
@@ -879,7 +883,7 @@ class Provider(AbstractProvider):
                 )
                 json_data['_post_filler'] = filler
 
-            result.extend(v3.response_to_items(
+            result.extend(provider.response_to_items(
                 provider, context, json_data,
                 item_filter={
                     'live_folder': True,
@@ -988,7 +992,7 @@ class Provider(AbstractProvider):
             return None
 
         if json_data:
-            return v3.response_to_items(self, context, json_data)
+            return self.response_to_items(self, context, json_data)
         return None
 
     def on_search_run(self, context, query=None):
@@ -1156,7 +1160,7 @@ class Provider(AbstractProvider):
         if not params.get(INCOGNITO) and not params.get(CHANNEL_ID):
             context.get_search_history().add_item(search_params)
 
-        result.extend(v3.response_to_items(
+        result.extend(self.response_to_items(
             self, context, json_data,
             item_filter={
                 'live_folder': True,
@@ -1300,7 +1304,9 @@ class Provider(AbstractProvider):
                     for video_id in items.keys()
                 ]
             }
-            video_items = v3.response_to_items(provider, context, v3_response)
+            video_items = provider.response_to_items(
+                provider, context, v3_response
+            )
             if command == 'play':
                 return yt_play.process_items_for_playlist(
                     context,
@@ -1992,7 +1998,9 @@ class Provider(AbstractProvider):
                                      item=item)
                 bookmarks_list.del_item(item_id)
 
-            bookmarks = v3.response_to_items(provider, context, v3_response)
+            bookmarks = provider.response_to_items(
+                provider, context, v3_response
+            )
             if command == 'play':
                 return yt_play.process_items_for_playlist(
                     context,
@@ -2175,7 +2183,9 @@ class Provider(AbstractProvider):
                     for video_id, item in items.items()
                 ]
             }
-            video_items = v3.response_to_items(provider, context, v3_response)
+            video_items = provider.response_to_items(
+                provider, context, v3_response
+            )
             if command == 'play':
                 return yt_play.process_items_for_playlist(
                     context,

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from functools import partial
 
-from . import UrlResolver, UrlToItemConverter, utils, v3
+from . import UrlResolver, UrlToItemConverter, utils
 from ...kodion import KodionException, logging
 from ...kodion.constants import (
     CATEGORY_LABEL,
@@ -76,7 +76,7 @@ def _process_related_videos(provider, context, client):
             return False, None
         category_label = None
 
-    result = v3.response_to_items(
+    result = provider.response_to_items(
         provider,
         context,
         json_data,
@@ -114,7 +114,7 @@ def _process_comments(provider, context, client):
     if not json_data:
         return False, None
 
-    result = v3.response_to_items(provider, context, json_data)
+    result = provider.response_to_items(provider, context, json_data)
     options = {
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.LIST_CONTENT,
@@ -164,7 +164,7 @@ def _process_recommendations(provider, context, client):
     json_data['_pre_filler'] = filler
     json_data['_post_filler'] = filler
 
-    result = v3.response_to_items(
+    result = provider.response_to_items(
         provider,
         context,
         json_data,
@@ -189,7 +189,7 @@ def _process_trending(provider, context, client):
 
     json_data['_post_filler'] = client.get_trending_videos
 
-    result = v3.response_to_items(provider, context, json_data)
+    result = provider.response_to_items(provider, context, json_data)
     options = {
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
@@ -214,7 +214,7 @@ def _process_browse_channels(provider, context, client):
     if not json_data:
         return False, None
 
-    result = v3.response_to_items(provider, context, json_data)
+    result = provider.response_to_items(provider, context, json_data)
     options = {
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.LIST_CONTENT,
@@ -232,7 +232,7 @@ def _process_disliked_videos(provider, context, client):
     if not json_data:
         return False, None
 
-    result = v3.response_to_items(provider, context, json_data)
+    result = provider.response_to_items(provider, context, json_data)
     options = {
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
@@ -257,7 +257,7 @@ def _process_live_events(provider, context, client, event_type='live'):
     if not json_data:
         return False, None
 
-    result = v3.response_to_items(provider, context, json_data)
+    result = provider.response_to_items(provider, context, json_data)
     options = {
         provider.CONTENT_TYPE: {
             'content_type': CONTENT.VIDEO_CONTENT,
@@ -472,7 +472,7 @@ def _process_saved_playlists(provider, context, client):
     json_data['_pre_filler'] = filler
     json_data['_post_filler'] = filler
 
-    result = v3.response_to_items(
+    result = provider.response_to_items(
         provider,
         context,
         json_data,
@@ -578,7 +578,9 @@ def _process_my_subscriptions(provider,
                     },
                 ],
             }
-            result = v3.response_to_items(provider, context, v3_response)
+            result = provider.response_to_items(
+                provider, context, v3_response
+            )
         else:
             result = []
 
@@ -589,7 +591,7 @@ def _process_my_subscriptions(provider,
                 CATEGORY_LABEL: None,
             },
         }
-        result.extend(v3.response_to_items(
+        result.extend(provider.response_to_items(
             provider, context, json_data,
             item_filter={
                 'live_folder': True,
@@ -630,7 +632,7 @@ def _process_virtual_list(provider, context, _client, playlist_id=None):
     json_data['_pre_filler'] = filler
     json_data['_post_filler'] = filler
 
-    result = v3.response_to_items(
+    result = provider.response_to_items(
         provider,
         context,
         json_data,

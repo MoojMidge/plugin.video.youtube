@@ -1363,7 +1363,7 @@ def get_thumbnail(thumb_size, thumbnails, default_thumb=None):
     return url
 
 
-def add_related_video_to_playlist(provider, context, client, v3, video_id):
+def add_related_video_to_playlist(provider, context, client, video_id):
     playlist_player = context.playlist_player()
     if playlist_player.size() > 999:
         return
@@ -1379,7 +1379,7 @@ def add_related_video_to_playlist(provider, context, client, v3, video_id):
         if not json_data:
             break
 
-        result_items = v3.response_to_items(
+        result_items = provider.response_to_items(
             provider,
             context,
             json_data,
