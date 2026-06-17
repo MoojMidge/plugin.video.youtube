@@ -32,7 +32,9 @@ from urllib3.connectionpool import (
 from urllib3.util.ssl_ import create_urllib3_context
 
 from .. import logging
+from ..constants import TEMP_PATH
 from ..utils.datetime import imf_fixdate
+from ..utils.file_system import make_dirs
 from ..utils.methods import generate_hash, register_clean_up
 
 
@@ -294,6 +296,7 @@ class BaseRequestsClass(object):
     _proxy = None
     _default_exc = (RequestException,)
 
+    BASE_PATH = make_dirs(TEMP_PATH)
     METHODS_TO_CACHE = {'GET', 'HEAD'}
 
     def __init__(self,

@@ -12,12 +12,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from .request_client import YouTubeRequestClient
 from ..youtube_exceptions import InvalidGrant, LoginException
-from ...kodion import logging
 
 
 class YouTubeLoginClient(YouTubeRequestClient):
-    log = logging.getLogger(__name__)
-
     _AUTH_SERVER = 'https://oauth2.googleapis.com/'
     DEVICE_CODE_URL = _AUTH_SERVER + 'device/code'
     REVOKE_URL = _AUTH_SERVER + 'revoke'

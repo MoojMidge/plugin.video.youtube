@@ -407,6 +407,12 @@ class LogRecord(logging.LogRecord):
 
 
 class KodiLogger(logging.Logger):
+    CRITICAL = logging.CRITICAL
+    ERROR = logging.ERROR
+    WARNING = logging.WARNING
+    INFO = logging.INFO
+    DEBUG = logging.DEBUG
+
     _verbose_logging = False
     _stack_info = False
 

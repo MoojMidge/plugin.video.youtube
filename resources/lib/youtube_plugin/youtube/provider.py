@@ -30,7 +30,7 @@ from .helper import (
 )
 from .helper.utils import update_duplicate_items
 from .youtube_exceptions import InvalidGrant, LoginException
-from ..kodion import AbstractProvider, logging
+from ..kodion import AbstractProvider
 from ..kodion.constants import (
     ADDON_ID,
     CATEGORY_LABEL,
@@ -71,8 +71,6 @@ from ..kodion.utils.datetime import now, since_epoch
 
 
 class Provider(AbstractProvider):
-    log = logging.getLogger(__name__)
-
     response_to_items = staticmethod(v3.response_to_items)
 
     def __init__(self):

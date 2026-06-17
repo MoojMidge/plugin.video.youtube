@@ -12,14 +12,11 @@ from __future__ import absolute_import, division, unicode_literals
 from base64 import b64decode, b64encode
 
 from .json_store import JSONStore
-from .. import logging
 from ..constants import DEVELOPER_CONFIGS, SYNC_API_KEYS
 from ... import key_sets
 
 
 class APIKeyStore(JSONStore):
-    log = logging.getLogger(__name__)
-
     DOMAIN_SUFFIX = '.apps.googleusercontent.com'
 
     def __init__(self, context):

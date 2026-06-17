@@ -22,7 +22,6 @@ from ..helper.ratebypass import ratebypass
 from ..helper.signature.cipher import Cipher
 from ..helper.utils import THUMB_TYPES, THUMB_URL
 from ..youtube_exceptions import YouTubeException
-from ...kodion import logging
 from ...kodion.compatibility import (
     entity_escape,
     parse_qs,
@@ -34,18 +33,13 @@ from ...kodion.compatibility import (
     urlunsplit,
     xbmcvfs,
 )
-from ...kodion.constants import INCOGNITO, PATHS, TEMP_PATH, VALUE_TO_STR
+from ...kodion.constants import INCOGNITO, PATHS, VALUE_TO_STR
 from ...kodion.network import get_connect_address
 from ...kodion.utils.datetime import fromtimestamp, since_epoch
-from ...kodion.utils.file_system import make_dirs
 from ...kodion.utils.methods import merge_dicts
 
 
 class YouTubePlayerClient(YouTubeDataClient):
-    log = logging.getLogger(__name__)
-
-    BASE_PATH = make_dirs(TEMP_PATH)
-
     FORMAT = {
         # === Non-DASH ===
         '5': {'container': 'flv',

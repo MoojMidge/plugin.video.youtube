@@ -25,7 +25,6 @@ from xml.etree.ElementTree import (
 from .login_client import YouTubeLoginClient
 from ..helper.v3 import pre_fill
 from ..youtube_exceptions import InvalidJSON, YouTubeException
-from ...kodion import logging
 from ...kodion.compatibility import available_cpu_count, string_type
 from ...kodion.constants import CHANNEL_ID, PLAYLIST_ID
 from ...kodion.items import DirectoryItem
@@ -41,8 +40,6 @@ from ...kodion.utils.datetime import (
 
 
 class YouTubeDataClient(YouTubeLoginClient):
-    log = logging.getLogger(__name__)
-
     _max_results = 50
     VIRTUAL_LISTS = frozenset(('WL', 'LL', 'HL'))
     JSON_PATHS = {

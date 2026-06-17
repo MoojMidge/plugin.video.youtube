@@ -11,14 +11,11 @@ from __future__ import absolute_import, division, unicode_literals
 from os.path import join as os_path_join
 
 from .request_client import YouTubeRequestClient
-from ...kodion import logging
 from ...kodion.compatibility import parse_qs, urlencode, urlsplit, xbmcvfs
 from ...kodion.constants import (
     PLAY_PROMPT_SUBTITLES,
-    TEMP_PATH,
     TRANSLATION_LANGUAGES,
 )
-from ...kodion.utils.file_system import make_dirs
 
 
 SUBTITLE_OPTIONS = {
@@ -52,10 +49,6 @@ SUBTITLE_SELECTIONS = {
 
 
 class Subtitles(YouTubeRequestClient):
-    log = logging.getLogger(__name__)
-
-    BASE_PATH = make_dirs(TEMP_PATH)
-
     FORMATS = {
         # '_default': None,
         # '_fallback': None,

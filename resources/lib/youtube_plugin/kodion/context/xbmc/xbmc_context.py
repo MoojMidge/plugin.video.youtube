@@ -15,7 +15,6 @@ from timeit import default_timer
 from weakref import proxy as weakref_proxy
 
 from ..abstract_context import AbstractContext
-from ... import logging
 from ...compatibility import (
     parse_qsl,
     urlsplit,
@@ -95,8 +94,6 @@ class IPCMonitor(xbmc.Monitor):
 
 
 class XbmcContext(AbstractContext):
-    log = logging.getLogger(__name__)
-
     # https://github.com/xbmc/xbmc/blob/master/xbmc/LangInfo.cpp#L1230
     _KODI_UI_PLAYER_LANGUAGE_OPTIONS = {
         None,  # No setting value
@@ -1047,11 +1044,11 @@ class XbmcContext(AbstractContext):
         if response.received:
             value = response.value
             if value == FAIL_FLAG:
-                log_level = logging.ERROR
+                log_level = cls.log.ERROR
                 log_value = 'FAILED'
                 stack_info = True
             else:
-                log_level = logging.DEBUG
+                log_level = cls.log.DEBUG
                 log_value = value
                 stack_info = False
             cls.log.log(

@@ -10,12 +10,9 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from .requests import BaseRequestsClass
-from .. import logging
 
 
 class Locator(BaseRequestsClass):
-    log = logging.getLogger(__name__)
-
     def __init__(self, context):
         self._base_url = 'http://ip-api.com'
         self._response = {}
